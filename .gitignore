@@ -1,0 +1,71 @@
+# ========== 构建输出目录 ==========
+build/
+[Bb]uild*/
+out/
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+
+# ========== CMake 生成文件 ==========
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeScripts/
+CTestTestfile.cmake
+Makefile
+*.cbp
+install_manifest.txt
+compile_commands.json
+CMakeSettings.json
+CMakeUserPresets.json
+
+# ========== Qt / Qt Creator ==========
+*.user
+*.user.*
+*.autosave
+.qtcreator/
+*.pro.user*
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.moc
+.qmake.stash
+Makefile.Debug
+Makefile.Release
+object_script.*
+
+# ========== MSVC 编译中间/产物 ==========
+*.obj
+*.o
+*.exe
+*.ilk
+*.pdb
+*.lib
+*.exp
+*.dll
+*.idb
+*.tlog
+
+# ========== Visual Studio ==========
+.vs/
+*.suo
+*.vcxproj.user
+*.sln.docstates
+*.aps
+*.ncb
+*.sdf
+*.opensdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# ========== 系统/编辑器杂项 ==========
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+.idea/

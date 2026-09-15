@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Document</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 100%;
+			height:1200;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: 1rem; }
+        pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+        code { background: #f6f8fa; padding: 0.2rem 0.4rem; border-radius: 3px; }
+        blockquote { border-left: 4px solid #dfe2e5; padding-left: 1rem; margin: 1rem 0; color: #6a737d; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        th, td { border: 1px solid #dfe2e5; padding: 0.5rem; text-align: left; }
+        th { background: #f6f8fa; }
+    </style>
+</head>
+<body>
+<h1 id="h1-treegraph-studio-"><a name="TreeGraph Studio - 图算法教学系统" class="reference-link"></a><span class="header-link octicon octicon-link"></span>TreeGraph Studio - 图算法教学系统</h1><p><img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg" alt="C++"><br><img src="https://img.shields.io/badge/Qt-5.14.2-green.svg" alt="Qt"><br><img src="https://img.shields.io/badge/Platform-Windows-lightgrey.svg" alt="Platform"></p>
+<blockquote>
+<p><strong>“让图论学习更直观、更高效的可视化教学系统”</strong></p>
+</blockquote>
+<hr>
+<h2 id="h2--"><a name="📋 目录" class="reference-link"></a><span class="header-link octicon octicon-link"></span>📋 目录</h2><ul>
+<li><a href="#项目概述">项目概述</a></li><li><a href="#功能特性">✨ 功能特性</a></li><li><a href="#系统要求">🖥️ 系统要求</a></li><li><a href="#构建说明">🔧 构建说明</a></li><li><a href="#快速开始">🚀 快速开始</a></li><li><a href="#详细使用指南">📖 详细使用指南</a></li><li><a href="#项目结构">🏗️ 项目结构</a></li><li><a href="#核心模块">🎯 核心模块</a></li><li><a href="#支持的算法">🧮 支持的算法</a></li><li><a href="#文件格式">📁 文件格式</a></li><li><a href="#注意事项">⚠️ 注意事项</a></li><li><a href="#常见问题">❓ 常见问题</a></li><li><a href="#开发者信息">👨‍💻 开发者信息</a></li></ul>
+<hr>
+<h2 id="h2-u9879u76EEu6982u8FF0"><a name="项目概述" class="reference-link"></a><span class="header-link octicon octicon-link"></span>项目概述</h2><p><strong>TreeGraph Studio</strong> 是一款基于C++和Qt5开发的图算法可视化教学系统，专为数据结构或离散数学等涉及图相关的课程设计。它提供了直观的图形界面，帮助用户创建、编辑和可视化各种图结构（树、有向图、无向图），并实时演示经典图算法的执行过程。</p>
+<p>系统采用模板化设计，支持高度可扩展的图算法实现，内置了BFS、DFS、Dijkstra最短路径和Kruskal最小生成树等核心算法，并可扩展其他算法。通过动画、颜色编码和逐步执行功能，将抽象的图论概念转化为直观的视觉体验。</p>
+<p>本系统也内置了教学模块，可以选择使用文件内置的教学文档、教学视频以及图案例等，便于初学者快速了解并进行实践。我们的学习系统也支持自行导入学习文档（.md, .txt）、音视频（.wmv [由于文件特性.mp4需要另外安装解码器支持]）、图（.graph）。</p>
+<hr>
+<h2 id="h2--"><a name="✨ 功能特性" class="reference-link"></a><span class="header-link octicon octicon-link"></span>✨ 功能特性</h2><h3 id="h3--"><a name="🎨 图结构编辑" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🎨 图结构编辑</h3><ul>
+<li><strong>多种图类型</strong>：支持无向图、有向图和树结构</li><li><strong>灵活编辑模式</strong>：选择、添加节点、添加边三种模式</li><li><strong>节点管理</strong>：双击重命名、右键删除、拖拽移动、坐标精确定位</li><li><strong>边管理</strong>：可视化权重编辑、方向箭头（有向图）、右键快捷操作</li><li><strong>坐标系统</strong>：可选的坐标轴显示，精确控制节点位置</li></ul>
+<h3 id="h3--"><a name="🧠 算法可视化" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🧠 算法可视化</h3><ul>
+<li><strong>实时动画</strong>：算法执行过程高亮显示访问节点和边</li><li><strong>分步控制</strong>：运行、暂停、继续、上一步、下一步、重置</li><li><strong>速度调节</strong>：1-10级动画速度可调</li><li><strong>状态追踪</strong>：实时显示算法执行状态、遍历顺序和结果</li><li><strong>智能提示</strong>：悬停节点/边显示详细信息（度数、权重、坐标等）</li></ul>
+<h3 id="h3--study-system-"><a name="📚 学习系统（Study System）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>📚 学习系统（Study System）</h3><ul>
+<li><strong>文档学习</strong>：支持Markdown和TXT格式，带搜索导航功能<ul>
+<li>语法高亮、代码块、表格渲染</li><li>实时搜索，高亮匹配结果</li><li>字体缩放</li></ul>
+</li><li><strong>图实践</strong>：浏览和加载预定义的图练习文件<ul>
+<li>文件预览（节点数、边数、类型）</li><li>一键加载到主窗口</li></ul>
+</li><li><strong>视频教程</strong>：多媒体学习支持<ul>
+<li>支持MP4/AVI/WMV/MKV等主流格式（自带.wmv支持，其他由于文件特性需要另外安装解码器）</li><li>自动检测系统解码器状态</li><li>提供解码器安装指引</li></ul>
+</li></ul>
+<h3 id="h3--"><a name="💾 数据持久化" class="reference-link"></a><span class="header-link octicon octicon-link"></span>💾 数据持久化</h3><ul>
+<li><strong>自定义文件格式</strong>：<code>.graph</code> JSON格式保存完整图结构</li><li><strong>类型校验</strong>：加载时自动检查图类型匹配</li></ul>
+<h3 id="h3--"><a name="🔧 其他特色" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🔧 其他特色</h3><ul>
+<li><strong>错误处理</strong>：树结构自动检测环和多父节点</li><li><strong>状态栏</strong>：实时显示节点/边统计信息</li><li><strong>帮助系统</strong>：详细的操作说明和进度日志</li></ul>
+<hr>
+<h2 id="h2--"><a name="🖥️ 系统要求" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🖥️ 系统要求</h2><h3 id="h3-u63A8u8350u914Du7F6E"><a name="推荐配置" class="reference-link"></a><span class="header-link octicon octicon-link"></span>推荐配置</h3><ul>
+<li><strong>操作系统</strong>：Windows 10/11</li><li><strong>编译器</strong>：支持C++17的编译器（MinGW 7.3.0 64-bit）</li><li><strong>构建工具</strong>：CMake 3.29.0</li><li><strong>Qt版本</strong>：Qt 5.14.2</li><li><strong>内存</strong>：2GB RAM</li><li><strong>硬盘空间</strong>：500MB可用空间</li></ul>
+<h3 id="h3-u89C6u9891u64ADu653Eu652Fu6301"><a name="视频播放支持" class="reference-link"></a><span class="header-link octicon octicon-link"></span>视频播放支持</h3><ul>
+<li><strong>Windows</strong>：建议安装 <a href="https://codecguide.com">K-Lite Codec Pack Basic</a> 以支持MP4/MKV等格式，否则视频只支持.wmv格式</li></ul>
+<hr>
+<h2 id="h2--"><a name="🔧 构建说明" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🔧 构建说明</h2><h3 id="h3-u524Du7F6Eu6761u4EF6"><a name="前置条件" class="reference-link"></a><span class="header-link octicon octicon-link"></span>前置条件</h3><ol>
+<li>安装CMake 3.29</li><li>安装Qt5开发库（Core, Widgets, Gui, Multimedia, MultimediaWidgets）</li><li>配置好C++17编译环境</li></ol>
+<h3 id="h3-u6784u5EFAu6B65u9AA4"><a name="构建步骤" class="reference-link"></a><span class="header-link octicon octicon-link"></span>构建步骤</h3><pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code class="lang-bash"><span class="com"># 1. 下载项目</span></code></li><li class="L1"><code class="lang-bash"></code></li><li class="L2"><code class="lang-bash"></code></li><li class="L3"><code class="lang-bash"><span class="com"># 2. 创建构建目录</span></code></li><li class="L4"><code class="lang-bash"></code></li><li class="L5"><code class="lang-bash"></code></li><li class="L6"><code class="lang-bash"><span class="com"># 3. 配置CMake（指定Qt路径，如果需要）</span></code></li><li class="L7"><code class="lang-bash"></code></li><li class="L8"><code class="lang-bash"></code></li><li class="L9"><code class="lang-bash"><span class="com"># 4. 编译项目</span></code></li><li class="L0"><code class="lang-bash"></code></li><li class="L1"><code class="lang-bash"></code></li><li class="L2"><code class="lang-bash"><span class="com"># 5. 运行程序</span></code></li></ol></pre>
+<h3 id="h3-windows-"><a name="Windows部署" class="reference-link"></a><span class="header-link octicon octicon-link"></span>Windows部署</h3><p>构建系统会自动处理Qt插件：</p>
+<ul>
+<li>复制<code>mediaservice</code>插件到可执行文件目录</li><li>支持WMV/AVI格式自动播放</li><li>MP4/MKV等格式需用户安装K-Lite Codec Pack</li></ul>
+<h3 id="h3-u6559u5B66u8D44u6E90u4F7Fu7528"><a name="教学资源使用" class="reference-link"></a><span class="header-link octicon octicon-link"></span>教学资源使用</h3><ul>
+<li>相关教学文件存储在“learning resources”文件夹中</li><li>请复制整个“learning resources”文件夹到构建好的文件夹内，系统会自动识别（相对路径）</li></ul>
+<hr>
+<h2 id="h2--"><a name="🚀 快速开始" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🚀 快速开始</h2><h3 id="h3--"><a name="第一步：启动程序" class="reference-link"></a><span class="header-link octicon octicon-link"></span>第一步：启动程序</h3><pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code class="lang-bash"><span class="pun">./</span><span class="typ">TreeGraphStudio</span></code></li></ol></pre>
+<h3 id="h3--"><a name="第二步：创建图结构" class="reference-link"></a><span class="header-link octicon octicon-link"></span>第二步：创建图结构</h3><ol>
+<li><strong>选择图类型</strong>：在左侧面板选择”无向”或”有向”</li><li><strong>进入编辑模式</strong>：点击”添加节点”或”添加边”</li><li><strong>构建图</strong>：<ul>
+<li><strong>添加节点</strong>：在画布空白处点击</li><li><strong>添加边</strong>：依次点击两个节点，输入权重</li></ul>
+</li></ol>
+<h3 id="h3--"><a name="第三步：运行动画" class="reference-link"></a><span class="header-link octicon octicon-link"></span>第三步：运行动画</h3><ol>
+<li><strong>选择算法</strong>：在右侧面板选择BFS/DFS/最短路径/最小生成树</li><li><strong>设置起点</strong>：点击选择起始节点（最短路径需额外选择终点）</li><li><strong>点击运行</strong>：观察算法执行过程</li><li><strong>控制动画</strong>：使用暂停/继续/上一步/下一步按钮</li></ol>
+<h3 id="h3--"><a name="第四步：保存成果" class="reference-link"></a><span class="header-link octicon octicon-link"></span>第四步：保存成果</h3><ul>
+<li>点击菜单栏”文件”→”保存”，导出<code>.graph</code>文件</li></ul>
+<hr>
+<h2 id="h2--"><a name="📖 详细使用指南" class="reference-link"></a><span class="header-link octicon octicon-link"></span>📖 详细使用指南</h2><h3 id="h3-u56FEu7C7Bu578Bu9009u62E9"><a name="图类型选择" class="reference-link"></a><span class="header-link octicon octicon-link"></span>图类型选择</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>特点</th>
+<th>适用算法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>无向图</strong></td>
+<td>边无方向，双向连接</td>
+<td>BFS, DFS, Dijkstra, Kruskal</td>
+</tr>
+<tr>
+<td><strong>有向图</strong></td>
+<td>边有方向，带箭头</td>
+<td>BFS, DFS, Dijkstra</td>
+</tr>
+<tr>
+<td><strong>树</strong></td>
+<td>无环，每个节点至多一个父节点</td>
+<td>BFS, DFS</td>
+</tr>
+</tbody>
+</table>
+<h3 id="h3-u7F16u8F91u6A21u5F0Fu8BE6u89E3"><a name="编辑模式详解" class="reference-link"></a><span class="header-link octicon octicon-link"></span>编辑模式详解</h3><h4 id="h4-1-"><a name="1. 选择模式（默认）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>1. 选择模式（默认）</h4><ul>
+<li><strong>选择节点</strong>：单击节点查看信息，作为算法起点</li><li><strong>拖拽移动</strong>：按住节点拖动改变位置</li><li><strong>右键菜单</strong>：<ul>
+<li><strong>重命名</strong>：修改节点标签</li><li><strong>删除节点</strong>：移除节点及其关联边</li></ul>
+</li><li><strong>边操作</strong>：右键边可编辑权重或删除</li></ul>
+<h4 id="h4-2-"><a name="2. 添加节点模式" class="reference-link"></a><span class="header-link octicon octicon-link"></span>2. 添加节点模式</h4><ul>
+<li><strong>创建节点</strong>：在画布空白处点击</li><li><strong>自动命名</strong>：按顺序生成”Node0”, “Node1”等名称</li><li><strong>坐标显示</strong>：开启后可看到精确坐标</li></ul>
+<h4 id="h4-3-"><a name="3. 添加边模式" class="reference-link"></a><span class="header-link octicon octicon-link"></span>3. 添加边模式</h4><ul>
+<li><strong>选择起点</strong>：点击第一个节点（变为绿色）</li><li><strong>选择终点</strong>：点击第二个不同节点</li><li><strong>输入权重</strong>：弹出对话框输入正整数权重</li><li><strong>取消操作</strong>：再次点击起点取消选择</li></ul>
+<h3 id="h3-u7B97u6CD5u4F7Fu7528u6307u5357"><a name="算法使用指南" class="reference-link"></a><span class="header-link octicon octicon-link"></span>算法使用指南</h3><h4 id="h4-bfs-"><a name="BFS（广度优先遍历）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>BFS（广度优先遍历）</h4><ul>
+<li><strong>特点</strong>：逐层访问节点，使用队列</li><li><strong>起点</strong>：任意节点</li><li><strong>可视化</strong>：黄色节点为已访问，蓝色悬停</li></ul>
+<h4 id="h4-dfs-"><a name="DFS（深度优先遍历）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>DFS（深度优先遍历）</h4><ul>
+<li><strong>特点</strong>：深度优先，使用栈</li><li><strong>起点</strong>：任意节点</li><li><strong>可视化</strong>：遍历顺序实时显示</li></ul>
+<h4 id="h4-dijkstra-"><a name="Dijkstra最短路径" class="reference-link"></a><span class="header-link octicon octicon-link"></span>Dijkstra最短路径</h4><ul>
+<li><strong>特点</strong>：计算单源最短路径（有向/无向）</li><li><strong>起点与终点</strong>：需分别指定</li><li><strong>可视化</strong>：高亮最短路径，显示总距离</li><li><strong>注意</strong>：权重必须为正数</li></ul>
+<h4 id="h4-kruskal-"><a name="Kruskal最小生成树" class="reference-link"></a><span class="header-link octicon octicon-link"></span>Kruskal最小生成树</h4><ul>
+<li><strong>特点</strong>：贪心地选择权值最小的边</li><li><strong>无需起点</strong>：自动处理全图</li><li><strong>可视化</strong>：<ul>
+<li><strong>黄色边</strong>：已选中的MST边</li><li><strong>红色虚线</strong>：被 rejecting 的边（会形成环）</li></ul>
+</li></ul>
+<h3 id="h3-u5B66u4E60u7CFBu7EDFu4F7Fu7528"><a name="学习系统使用" class="reference-link"></a><span class="header-link octicon octicon-link"></span>学习系统使用</h3><ol>
+<li><strong>打开学习系统</strong>：点击右侧面板”打开学习系统”</li><li><strong>文档学习</strong>：浏览Markdown格式的算法教程</li><li><strong>图实践</strong>：<ul>
+<li>选择存储目录（默认为<code>learning resources/graphs</code>）</li><li>双击<code>.graph</code>文件预览</li><li>点击”加载到主窗口”开始练习</li></ul>
+</li><li><strong>视频学习</strong>：<ul>
+<li>打开视频文件（推荐WMV/AVI格式）</li><li>查看解码器状态提示</li><li>如需MP4支持，按指引安装K-Lite Codec Pack</li></ul>
+</li></ol>
+<hr>
+<h2 id="h2--"><a name="🏗️ 项目结构" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🏗️ 项目结构</h2><pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code><span class="typ">TreeGraphStudio</span><span class="pun">/</span></code></li><li class="L1"><code><span class="pun">├──</span><span class="pln"> </span><span class="typ">CMakeLists</span><span class="pun">.</span><span class="pln">txt              </span><span class="com"># 构建配置</span></code></li><li class="L2"><code><span class="pun">├──</span><span class="pln"> main</span><span class="pun">.</span><span class="pln">cpp                    </span><span class="com"># 程序入口</span></code></li><li class="L3"><code><span class="pun">├──</span><span class="pln"> src</span><span class="pun">/</span></code></li><li class="L4"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> core</span><span class="pun">/</span><span class="pln">                   </span><span class="com"># 核心数据结构</span></code></li><li class="L5"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">Graph</span><span class="pun">.</span><span class="pln">h            </span><span class="com"># 图基类（模板化）</span></code></li><li class="L6"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">Tree</span><span class="pun">.</span><span class="pln">h             </span><span class="com"># 树类（继承Graph）</span></code></li><li class="L7"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">Node</span><span class="pun">.</span><span class="pln">h             </span><span class="com"># 节点类模板</span></code></li><li class="L8"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> </span><span class="typ">Edge</span><span class="pun">.</span><span class="pln">h             </span><span class="com"># 边类模板</span></code></li><li class="L9"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span></code></li><li class="L0"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> algorithms</span><span class="pun">/</span><span class="pln">            </span><span class="com"># 算法实现</span></code></li><li class="L1"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">Traversal</span><span class="pun">.</span><span class="pln">h        </span><span class="com"># BFS/DFS遍历</span></code></li><li class="L2"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">ShortestPath</span><span class="pun">.</span><span class="pln">h     </span><span class="com"># Dijkstra算法</span></code></li><li class="L3"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> MST</span><span class="pun">.</span><span class="pln">h              </span><span class="com"># Kruskal算法</span></code></li><li class="L4"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span></code></li><li class="L5"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> ui</span><span class="pun">/</span><span class="pln">                    </span><span class="com"># 主界面组件</span></code></li><li class="L6"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">MainWindow</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp   </span><span class="com"># 主窗口</span></code></li><li class="L7"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">GraphCanvas</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp  </span><span class="com"># 图编辑画布</span></code></li><li class="L8"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> </span><span class="typ">HelpWindow</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp   </span><span class="com"># 帮助窗口</span></code></li><li class="L9"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span></code></li><li class="L0"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> study</span><span class="pun">/</span><span class="pln">                 </span><span class="com"># 学习系统</span></code></li><li class="L1"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">StudyWindow</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp  </span><span class="com"># 学习系统主窗口</span></code></li><li class="L2"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">DocumentViewer</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp </span><span class="com"># 文档查看器</span></code></li><li class="L3"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">GraphPracticeWidget</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp </span><span class="com"># 图实践组件</span></code></li><li class="L4"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> </span><span class="typ">VideoPlayerWidget</span><span class="pun">.</span><span class="pln">h</span><span class="pun">/</span><span class="pln">cpp   </span><span class="com"># 视频播放器</span></code></li><li class="L5"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">│</span></code></li><li class="L6"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> utils</span><span class="pun">/</span><span class="pln">                 </span><span class="com"># 工具类</span></code></li><li class="L7"><code><span class="pun">│</span><span class="pln">       </span><span class="pun">├──</span><span class="pln"> </span><span class="typ">JsonSerializer</span><span class="pun">.</span><span class="pln">h   </span><span class="com"># JSON序列化</span></code></li><li class="L8"><code><span class="pun">│</span><span class="pln">       </span><span class="pun">└──</span><span class="pln"> </span><span class="typ">PathUtils</span><span class="pun">.</span><span class="pln">h        </span><span class="com"># 路径处理</span></code></li><li class="L9"><code><span class="pun">│</span></code></li><li class="L0"><code><span class="pun">├──</span><span class="pln"> resources</span><span class="pun">.</span><span class="pln">qrc              </span><span class="com"># Qt资源文件</span></code></li><li class="L1"><code><span class="pun">└──</span><span class="pln"> README</span><span class="pun">.</span><span class="pln">md                  </span><span class="com"># 本文档</span></code></li></ol></pre><hr>
+<h2 id="h2--"><a name="🎯 核心模块" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🎯 核心模块</h2><h3 id="h3-1-graphcanvas-"><a name="1. GraphCanvas（图画布）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>1. GraphCanvas（图画布）</h3><p><strong>定位</strong>：核心交互组件<br><strong>功能</strong>：</p>
+<ul>
+<li>处理所有鼠标事件和绘图逻辑</li><li>管理节点/边的UI元素（QGraphicsItem）</li><li>算法动画的渲染和状态更新</li><li>模板化支持多种图类型</li></ul>
+<p><strong>关键设计</strong>：</p>
+<ul>
+<li>使用<code>void*</code>指针存储模板化图对象，实现运行时多态</li><li><code>AlgorithmWrapper</code>结构体统一不同算法的接口</li><li>步骤历史机制支持前进/后退</li></ul>
+<h3 id="h3-2-graph-tree-"><a name="2. Graph/Tree（数据结构）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>2. Graph/Tree（数据结构）</h3><p><strong>特点</strong>：</p>
+<ul>
+<li>完全模板化：<code>Graph&lt;NodeData, EdgeWeight, Directed&gt;</code></li><li>智能指针管理内存：<code>unique_ptr&lt;NodeType&gt;</code>和<code>unique_ptr&lt;EdgeType&gt;</code></li><li>高效的邻接表存储：<code>unordered_map&lt;int, vector&lt;int&gt;&gt;</code></li><li>树结构特有：环检测、单父节点校验</li></ul>
+<h3 id="h3-3-"><a name="3. 算法模块" class="reference-link"></a><span class="header-link octicon octicon-link"></span>3. 算法模块</h3><p><strong>统一接口</strong>：</p>
+<pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code class="lang-cpp"><span class="com">// 所有算法支持逐步执行</span></code></li><li class="L1"><code class="lang-cpp"><span class="kwd">void</span><span class="pln"> initialize</span><span class="pun">(</span><span class="typ">int</span><span class="pln"> startNode</span><span class="pun">);</span></code></li><li class="L2"><code class="lang-cpp"><span class="kwd">bool</span><span class="pln"> step</span><span class="pun">();</span><span class="pln">  </span><span class="com">// 执行一步，返回是否还有更多步骤</span></code></li><li class="L3"><code class="lang-cpp"><span class="kwd">void</span><span class="pln"> runAll</span><span class="pun">();</span><span class="pln"> </span><span class="com">// 运行全部</span></code></li></ol></pre>
+<p><strong>回调机制</strong>：使用<code>std::function</code>实现事件驱动的可视化更新</p>
+<h3 id="h3-4-"><a name="4. 学习系统集成" class="reference-link"></a><span class="header-link octicon octicon-link"></span>4. 学习系统集成</h3><p><strong>松散耦合</strong>：通过信号/槽机制与主窗口通信<br><strong>静默加载</strong>：<code>loadGraphQuietly</code>避免错误弹窗干扰用户体验<br><strong>资源管理</strong>：自动创建<code>learning resources</code>目录结构</p>
+<hr>
+<h2 id="h2--"><a name="🧮 支持的算法" class="reference-link"></a><span class="header-link octicon octicon-link"></span>🧮 支持的算法</h2><h3 id="h3-u904Du5386u7B97u6CD5"><a name="遍历算法" class="reference-link"></a><span class="header-link octicon octicon-link"></span>遍历算法</h3><table>
+<thead>
+<tr>
+<th>算法</th>
+<th>时间复杂度</th>
+<th>空间复杂度</th>
+<th>适用图类型</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>BFS</strong></td>
+<td>O(V+E)</td>
+<td>O(V)</td>
+<td>有向/无向/树</td>
+<td>队列实现，分层遍历</td>
+</tr>
+<tr>
+<td><strong>DFS</strong></td>
+<td>O(V+E)</td>
+<td>O(V)</td>
+<td>有向/无向/树</td>
+<td>栈实现，深度优先</td>
+</tr>
+</tbody>
+</table>
+<h3 id="h3--dijkstra-"><a name="最短路径（Dijkstra）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>最短路径（Dijkstra）</h3><ul>
+<li><strong>时间复杂度</strong>：O(E log V)（优先队列优化）</li><li><strong>限制</strong>：<strong>仅支持正权边</strong></li><li><strong>输出</strong>：起点到所有节点的最短距离，以及目标路径</li></ul>
+<h3 id="h3--kruskal-"><a name="最小生成树（Kruskal）" class="reference-link"></a><span class="header-link octicon octicon-link"></span>最小生成树（Kruskal）</h3><ul>
+<li><strong>时间复杂度</strong>：O(E log E)（排序为主）</li><li><strong>适用</strong>：<strong>仅无向图/树</strong></li><li><strong>输出</strong>：MST边的集合和总权重</li><li><strong>拒边可视化</strong>：红色虚线显示被排除的边</li></ul>
+<hr>
+<h2 id="h2--"><a name="📁 文件格式" class="reference-link"></a><span class="header-link octicon octicon-link"></span>📁 文件格式</h2><h3 id="h3--graph-"><a name=".graph 文件格式" class="reference-link"></a><span class="header-link octicon octicon-link"></span>.graph 文件格式</h3><p>JSON结构，示例如下：</p>
+<pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code class="lang-json"><span class="pun">{</span></code></li><li class="L1"><code class="lang-json"><span class="pln">  </span><span class="str">"nodes"</span><span class="pun">:</span><span class="pln"> </span><span class="pun">[</span></code></li><li class="L2"><code class="lang-json"><span class="pln">    </span><span class="pun">{</span></code></li><li class="L3"><code class="lang-json"><span class="pln">      </span><span class="str">"id"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">0</span><span class="pun">,</span></code></li><li class="L4"><code class="lang-json"><span class="pln">      </span><span class="str">"label"</span><span class="pun">:</span><span class="pln"> </span><span class="str">"A"</span><span class="pun">,</span></code></li><li class="L5"><code class="lang-json"><span class="pln">      </span><span class="str">"x"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">100.0</span><span class="pun">,</span></code></li><li class="L6"><code class="lang-json"><span class="pln">      </span><span class="str">"y"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">100.0</span></code></li><li class="L7"><code class="lang-json"><span class="pln">    </span><span class="pun">}</span></code></li><li class="L8"><code class="lang-json"><span class="pln">  </span><span class="pun">],</span></code></li><li class="L9"><code class="lang-json"><span class="pln">  </span><span class="str">"edges"</span><span class="pun">:</span><span class="pln"> </span><span class="pun">[</span></code></li><li class="L0"><code class="lang-json"><span class="pln">    </span><span class="pun">{</span></code></li><li class="L1"><code class="lang-json"><span class="pln">      </span><span class="str">"from"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">0</span><span class="pun">,</span></code></li><li class="L2"><code class="lang-json"><span class="pln">      </span><span class="str">"to"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">1</span><span class="pun">,</span></code></li><li class="L3"><code class="lang-json"><span class="pln">      </span><span class="str">"weight"</span><span class="pun">:</span><span class="pln"> </span><span class="lit">5</span></code></li><li class="L4"><code class="lang-json"><span class="pln">    </span><span class="pun">}</span></code></li><li class="L5"><code class="lang-json"><span class="pln">  </span><span class="pun">],</span></code></li><li class="L6"><code class="lang-json"><span class="pln">  </span><span class="str">"type"</span><span class="pun">:</span><span class="pln"> </span><span class="str">"undirected"</span><span class="pln">  </span><span class="pun">//</span><span class="pln"> </span><span class="pun">或</span><span class="pln"> </span><span class="str">"directed"</span></code></li><li class="L7"><code class="lang-json"><span class="pun">}</span></code></li></ol></pre>
+<h3 id="h3-u5B66u4E60u8D44u6E90u76EEu5F55u7ED3u6784"><a name="学习资源目录结构" class="reference-link"></a><span class="header-link octicon octicon-link"></span>学习资源目录结构</h3><pre class="prettyprint linenums prettyprinted" style=""><ol class="linenums"><li class="L0"><code><span class="pln">learning resources</span><span class="pun">/</span></code></li><li class="L1"><code><span class="pun">├──</span><span class="pln"> documents</span><span class="pun">/</span><span class="pln">        </span><span class="com"># Markdown/TXT文档</span></code></li><li class="L2"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">md</span></code></li><li class="L3"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">txt</span></code></li><li class="L4"><code><span class="pun">├──</span><span class="pln"> graphs</span><span class="pun">/</span><span class="pln">          </span><span class="com"># .graph练习文件</span></code></li><li class="L5"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">├──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">graph</span></code></li><li class="L6"><code><span class="pun">│</span><span class="pln">   </span><span class="pun">└──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">graph</span></code></li><li class="L7"><code><span class="pun">└──</span><span class="pln"> videos</span><span class="pun">/</span><span class="pln">          </span><span class="com"># 教学视频</span></code></li><li class="L8"><code><span class="pln">    </span><span class="pun">├──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">wmv</span></code></li><li class="L9"><code><span class="pln">    </span><span class="pun">└──</span><span class="pln"> </span><span class="pun">.</span><span class="pln">mp4</span></code></li></ol></pre><hr>
+<h2 id="h2--"><a name="⚠️ 注意事项" class="reference-link"></a><span class="header-link octicon octicon-link"></span>⚠️ 注意事项</h2><h3 id="h3-u6280u672Fu8981u6C42"><a name="技术要求" class="reference-link"></a><span class="header-link octicon octicon-link"></span>技术要求</h3><ol>
+<li><strong>C++模板复杂性</strong>：核心模块重度使用模板，编译时间可能较长</li><li><strong>Qt依赖</strong>：必须完整安装Multimedia模块，否则视频功能不可用</li><li><strong>内存管理</strong>：使用智能指针，但算法包装器需手动delete防止内存泄漏</li></ol>
+<h3 id="h3-u4F7Fu7528u9650u5236"><a name="使用限制" class="reference-link"></a><span class="header-link octicon octicon-link"></span>使用限制</h3><ol>
+<li><strong>最短路径权重</strong>：Dijkstra算法要求所有边权为正数，负数会导致错误结果</li><li><strong>Kruskal适用范围</strong>：有向图无法使用最小生成树功能</li><li><strong>树结构约束</strong>：每个节点只能有一个父节点，添加边时会自动检测环</li><li><strong>节点命名</strong>：节点名称必须唯一，大小写敏感</li></ol>
+<h3 id="h3-u89C6u9891u64ADu653E"><a name="视频播放" class="reference-link"></a><span class="header-link octicon octicon-link"></span>视频播放</h3><ol>
+<li><strong>Windows推荐格式</strong>：WMV/AVI（无需额外解码器）</li><li><strong>MP4/MKV支持</strong>：必须安装K-Lite Codec Pack Basic</li><li><strong>路径问题</strong>：避免使用中文或特殊字符路径，可能导致加载失败</li></ol>
+<hr>
+<h2 id="h2--"><a name="❓ 常见问题" class="reference-link"></a><span class="header-link octicon octicon-link"></span>❓ 常见问题</h2><p><strong>Q1: 编译时出现”Qt5 Multimedia not found”错误</strong><br>A: 确保Qt安装时勾选了Multimedia模块，并正确设置<code>CMAKE_PREFIX_PATH</code></p>
+<p><strong>Q2: 视频无法播放，提示”格式不支持”</strong><br>A: Windows用户请安装K-Lite Codec Pack Basic，Linux用户安装<code>ffmpeg</code></p>
+<p><strong>Q3: 加载.graph文件失败</strong><br>A: 检查文件类型是否与当前图类型匹配（有向/无向），可尝试切换图类型后重新加载</p>
+<p><strong>Q4: Kruskal算法在有向图上无法使用</strong><br>A: 这是设计限制，最小生成树仅定义于无向图。请先切换为无向图模式</p>
+<p><strong>Q5: 节点名称无法重复</strong><br>A: 系统使用名称作为唯一标识符，重复名称会导致映射冲突。请使用唯一名称</p>
+<p><strong>Q6: 如何添加自定义算法？</strong><br>A: 在<code>algorithms/</code>目录下创建新类，继承统一接口，在<code>GraphCanvas::startAlgorithm</code>中添加分支</p>
+<hr>
+<h2 id="h2--"><a name="👨‍💻 开发者信息" class="reference-link"></a><span class="header-link octicon octicon-link"></span>👨‍💻 开发者信息</h2><ul>
+<li><strong>项目名称</strong>：TreeGraph Studio</li><li><strong>版本</strong>：v1.0</li><li><strong>开发语言</strong>：C++17</li><li><strong>GUI框架</strong>：Qt5</li><li><strong>开发周期</strong>：课程设计项目</li><li><strong>最后更新</strong>：2025-12-27</li></ul>
+<h3 id="h3-u6269u5C55u5EFAu8BAE"><a name="扩展建议" class="reference-link"></a><span class="header-link octicon octicon-link"></span>扩展建议</h3><ol>
+<li><strong>增加算法</strong>：A*寻路、Prim算法、拓扑排序</li><li><strong>增强功能</strong>：撤销/重做、图生成器（随机/网格）</li><li><strong>性能优化</strong>：大规模图（1000+节点）的渲染优化</li><li><strong>跨平台</strong>：完善Linux/macOS视频解码支持</li><li><strong>国际化</strong>：添加多语言支持</li></ol>
+<h3 id="h3-u8054u7CFBu65B9u5F0F"><a name="联系方式" class="reference-link"></a><span class="header-link octicon octicon-link"></span>联系方式</h3><p>项目地址：[GitHub Repository]<br>问题反馈：[Issues]<br>邮箱：<a href="mailto:w_shangye2024@lzu.edu.cn">w_shangye2024@lzu.edu.cn</a></p>
+<hr>
+<h2 id="h2--"><a name="📄 许可证" class="reference-link"></a><span class="header-link octicon octicon-link"></span>📄 许可证</h2><p>MIT License - 详见项目根目录LICENSE文件</p>
+<hr>
+<p><strong>祝您使用愉快！如有问题，请查阅帮助文档或联系开发者。</strong></p>
+
+</body>
+</html>
