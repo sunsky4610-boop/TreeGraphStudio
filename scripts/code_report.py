@@ -24,7 +24,7 @@ def generate_html_report(directory, language_counts, total_lines, file_stats=Non
     """
     from datetime import datetime
     
-    report_dir = 'reports'
+    report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reports')
     if not os.path.exists(report_dir):
         os.makedirs(report_dir)
     

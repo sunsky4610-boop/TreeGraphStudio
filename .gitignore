@@ -69,3 +69,6 @@ Desktop.ini
 *.swp
 *~
 .idea/
+
+# ========== 脚本生成产物 ==========
+scripts/reports/
