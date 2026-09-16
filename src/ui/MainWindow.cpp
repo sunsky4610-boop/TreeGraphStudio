@@ -11,7 +11,16 @@
 #include <QInputDialog>
 #include <QDateTime>
 #include <QCheckBox>
+#include <QMetaObject>
+#include <QApplication>
+#include <QFile>
+#include <QSettings>
 #include "HelpWindow.h"
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <dwmapi.h>
+#endif
 
 MainWindow::MainWindow(QWidget* parent):
     QMainWindow(parent),
@@ -26,13 +35,16 @@ void MainWindow::setupUI() {
     setCentralWidget(centralWidget);
 
     auto* mainLayout = new QHBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
 
     // ==================== 左侧面板 ====================
     auto* leftPanel = new QGroupBox("工具箱", this);
-    leftPanel->setMinimumWidth(180);
-    leftPanel->setMaximumWidth(220);
+    leftPanel->setObjectName("leftSidebar");
+    leftPanel->setFixedWidth(240);
     auto* leftLayout = new QVBoxLayout(leftPanel);
-    leftLayout->setSpacing(12);
+    leftLayout->setContentsMargins(14, 16, 14, 14);
+    leftLayout->setSpacing(8);
 
     // 图操作组
     auto* graphOpGroup = new QGroupBox("图操作", leftPanel);
@@ -71,27 +83,7 @@ void MainWindow::setupUI() {
     graphOpLayout->addWidget(clearBtn);
     leftLayout->addWidget(graphOpGroup);
 
-    m_newGraphBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #4CAF50;"  // 选中状态绿色
-        "    color: white;"
-        "    font-weight: bold;"
-        "    border: 2px solid #45a049;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #45a049;"
-        "}"
-    );
 
-    m_newTreeBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #f0f0f0;"  // 未选中状态灰色
-        "    border: 1px solid #ccc;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #e0e0e0;"
-        "}"
-    );
 
     // 创建按钮组
     m_graphTypeButtonGroup = new QButtonGroup(this);
@@ -154,9 +146,73 @@ void MainWindow::setupUI() {
 
     leftLayout->addStretch();
 
+    // 显示设置放在左侧工具箱底部，避免悬浮在画布上遮挡内容
+    auto* showGroup = new QGroupBox("显示设置", leftPanel);
+    auto* showLayout = new QVBoxLayout(showGroup);
+
+    // 权重显示按钮
+    m_showWeightsBtn = new QPushButton("隐藏权重", showGroup);
+    m_showWeightsBtn->setCheckable(true);
+    m_showWeightsBtn->setChecked(true);
+
+    // 坐标显示复选框
+    auto* showCoordsCheck = new QCheckBox("显示节点坐标", showGroup);
+    showCoordsCheck->setChecked(false);
+
+    // 坐标轴显示复选框
+    auto* showAxesCheck = new QCheckBox("显示坐标轴", showGroup);
+    showAxesCheck->setChecked(false);
+
+    connect(m_showWeightsBtn, &QPushButton::toggled, [this](bool checked) {
+        if (m_canvas) {
+            m_canvas->setShowWeights(checked);
+            m_showWeightsBtn->setText(checked ? "隐藏权重" : "显示权重");
+            m_infoPanel->append(QString("[%1] %2")
+                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
+                               .arg(checked ? "显示边权重" : "隐藏边权重"));
+        }
+    });
+
+    connect(showCoordsCheck, &QCheckBox::toggled, [this](bool checked) {
+        if (m_canvas) {
+            m_canvas->setShowCoordinates(checked);
+            m_infoPanel->append(QString("[%1] %2节点坐标")
+                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
+                               .arg(checked ? "显示" : "隐藏"));
+        }
+    });
+
+    connect(showAxesCheck, &QCheckBox::toggled, [this](bool checked) {
+        if (m_canvas) {
+            m_canvas->setShowAxes(checked);
+            m_infoPanel->append(QString("[%1] %2坐标轴")
+                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
+                               .arg(checked ? "显示" : "隐藏"));
+        }
+    });
+
+    showLayout->addWidget(m_showWeightsBtn);
+    showLayout->addWidget(showCoordsCheck);
+    showLayout->addWidget(showAxesCheck);
+    leftLayout->addWidget(showGroup);
+
+    // 学习系统入口与显示设置一起固定在左侧底部
+    m_studyBtn = new QPushButton("打开学习系统", leftPanel);
+    m_studyBtn->setObjectName("primaryButton");
+    connect(m_studyBtn, &QPushButton::clicked, this, &MainWindow::onStudySystemClicked);
+    leftLayout->addWidget(m_studyBtn);
+
     // ==================== 中央画布 ====================
     m_canvas = new GraphCanvas(this);
     m_canvas->setMinimumWidth(400);
+
+    // 工作区保留统一留白，让画布与两侧栏形成清晰、克制的层级
+    auto* canvasShell = new QWidget(centralWidget);
+    canvasShell->setObjectName("workspace");
+    auto* canvasLayout = new QVBoxLayout(canvasShell);
+    canvasLayout->setContentsMargins(14, 14, 14, 14);
+    canvasLayout->setSpacing(0);
+    canvasLayout->addWidget(m_canvas);
 
     // 连接画布信号
     connect(m_canvas, &GraphCanvas::nodeSelected, this, &MainWindow::onNodeSelected);
@@ -230,9 +286,11 @@ void MainWindow::setupUI() {
 
     // ==================== 右侧面板 ====================
     auto* rightPanel = new QGroupBox("控制面板", this);
-    rightPanel->setFixedWidth(240);
+    rightPanel->setObjectName("rightSidebar");
+    rightPanel->setFixedWidth(360);
     auto* rightLayout = new QVBoxLayout(rightPanel);
-    rightLayout->setSpacing(12);
+    rightLayout->setContentsMargins(14, 16, 14, 14);
+    rightLayout->setSpacing(8);
 
     // 算法选择
     auto* algoGroup = new QGroupBox("算法选择", rightPanel);
@@ -276,6 +334,7 @@ void MainWindow::setupUI() {
 
     // 第一行：运行、暂停、继续
     m_runButton = new QPushButton("运行", algoCtrlGroup);
+    m_runButton->setObjectName("primaryButton");
     m_pauseButton = new QPushButton("暂停", algoCtrlGroup);
     m_resumeButton = new QPushButton("继续", algoCtrlGroup);
 
@@ -296,7 +355,6 @@ void MainWindow::setupUI() {
                                        m_prevStepButton, m_nextStepButton, m_resetButton};
     for (auto* btn : algoButtons) {
         btn->setMinimumWidth(65);
-        btn->setMaximumWidth(80);
     }
 
     // 连接算法控制按钮信号
@@ -309,73 +367,14 @@ void MainWindow::setupUI() {
 
     rightLayout->addWidget(algoCtrlGroup);
 
-    // 显示控制组
-    auto* showGroup = new QGroupBox("显示设置", rightPanel);
-    auto* showLayout = new QVBoxLayout(showGroup);
-
-    // 权重显示按钮
-    m_showWeightsBtn = new QPushButton("隐藏权重", showGroup);
-    m_showWeightsBtn->setCheckable(true);
-    m_showWeightsBtn->setChecked(true);
-
-    // 坐标显示复选框
-    auto* showCoordsCheck = new QCheckBox("显示节点坐标", showGroup);
-    showCoordsCheck->setChecked(false);
-
-    // 坐标轴显示复选框
-    auto* showAxesCheck = new QCheckBox("显示坐标轴", showGroup);
-    showAxesCheck->setChecked(false);
-
-    connect(m_showWeightsBtn, &QPushButton::toggled, [this](bool checked) {
-        if (m_canvas) {
-            m_canvas->setShowWeights(checked);
-            m_showWeightsBtn->setText(checked ? "隐藏权重" : "显示权重");
-            m_infoPanel->append(QString("[%1] %2")
-                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
-                               .arg(checked ? "显示边权重" : "隐藏边权重"));
-        }
-    });
-
-    connect(showCoordsCheck, &QCheckBox::toggled, [this](bool checked) {
-        if (m_canvas) {
-            m_canvas->setShowCoordinates(checked);
-            m_infoPanel->append(QString("[%1] %2节点坐标")
-                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
-                               .arg(checked ? "显示" : "隐藏"));
-        }
-    });
-
-    connect(showAxesCheck, &QCheckBox::toggled, [this](bool checked) {
-        if (m_canvas) {
-            m_canvas->setShowAxes(checked);
-            m_infoPanel->append(QString("[%1] %2坐标轴")
-                               .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
-                               .arg(checked ? "显示" : "隐藏"));
-        }
-    });
-
-    showLayout->addWidget(m_showWeightsBtn);
-    showLayout->addWidget(showCoordsCheck);
-    showLayout->addWidget(showAxesCheck);
-    rightLayout->addWidget(showGroup);
-
-    // "学习系统"组：
-    auto* studyGroup = new QGroupBox("学习系统", rightPanel);
-    auto* studyLayout = new QVBoxLayout(studyGroup);
-    m_studyBtn = new QPushButton("📚 打开学习系统", rightPanel);
-    m_studyBtn->setStyleSheet("padding: 10px; font-weight: bold; background-color: #3498db; color: white;");
-    connect(m_studyBtn, &QPushButton::clicked, this, &MainWindow::onStudySystemClicked);
-    studyLayout->addWidget(m_studyBtn);
-    rightLayout->addWidget(studyGroup);
-
     // 信息面板
     auto* infoGroup = new QGroupBox("操作说明与进度", rightPanel);
     auto* infoLayout = new QVBoxLayout(infoGroup);
 
     // 信息显示区域
     m_infoPanel = new QTextEdit(rightPanel);
+    m_infoPanel->setObjectName("activityLog");
     m_infoPanel->setReadOnly(true);
-    m_infoPanel->setFixedHeight(200);
     m_infoPanel->setPlainText(
         "==== TreeGraph Studio 使用说明 ====\n"
         "1. 选择图类型（有向/无向）\n"
@@ -430,13 +429,13 @@ void MainWindow::setupUI() {
         helpWindow->show();
     });
 
-    infoLayout->addWidget(m_infoPanel);
+    infoLayout->addWidget(m_infoPanel, 1);
     infoLayout->addLayout(buttonLayout);
-    rightLayout->addWidget(infoGroup);
+    rightLayout->addWidget(infoGroup, 1);
 
     // ==================== 添加到主布局 ====================
     mainLayout->addWidget(leftPanel);
-    mainLayout->addWidget(m_canvas, 1);
+    mainLayout->addWidget(canvasShell, 1);
     mainLayout->addWidget(rightPanel);
 
     // ==================== 菜单和状态栏 ====================
@@ -465,6 +464,9 @@ void MainWindow::createMenuBar() {
     auto* zoomInAction = viewMenu->addAction("放大(&I)");
     auto* zoomOutAction = viewMenu->addAction("缩小(&O)");
     auto* resetViewAction = viewMenu->addAction("重置视图(&R)");
+    viewMenu->addSeparator();
+    auto* darkModeAction = viewMenu->addAction("深色模式(&D)");
+    darkModeAction->setCheckable(true);
 
     connect(zoomInAction, &QAction::triggered, [this](){
         if (m_canvas) {
@@ -484,11 +486,20 @@ void MainWindow::createMenuBar() {
 
     connect(resetViewAction, &QAction::triggered, [this](){
         if (m_canvas) {
-            m_canvas->resetTransform();
+            m_canvas->resetViewTransform();
+            m_canvas->centerGraphAnimated(true);
             m_infoPanel->append(QString("[%1] 视图重置")
                                .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
         }
     });
+
+    connect(darkModeAction, &QAction::toggled, this, [this](bool checked) {
+        applyTheme(checked);
+        m_infoPanel->append(QString("[%1] 已切换至%2模式")
+                           .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
+                           .arg(checked ? "深色" : "浅色"));
+    });
+    darkModeAction->setChecked(QSettings().value("appearance/darkMode", false).toBool());
 
     auto* helpMenu = menuBar()->addMenu("帮助(&H)");
     auto* helpAction = helpMenu->addAction("详细帮助(&H)");
@@ -498,6 +509,7 @@ void MainWindow::createMenuBar() {
     connect(helpAction, &QAction::triggered, [this](){
         HelpWindow* helpWindow = new HelpWindow(this);
         helpWindow->setAttribute(Qt::WA_DeleteOnClose);
+        helpWindow->showManual();
         helpWindow->show();
     });
 
@@ -516,6 +528,28 @@ void MainWindow::createMenuBar() {
             "作者: 学生项目\n"
         );
     });
+}
+
+void MainWindow::applyTheme(bool dark) {
+    QFile qss(dark ? ":/themes/dark.qss" : ":/themes/light.qss");
+    if (qss.open(QFile::ReadOnly | QFile::Text)) {
+        qApp->setStyleSheet(QString::fromUtf8(qss.readAll()));
+    }
+    if (m_canvas) m_canvas->setDarkMode(dark);
+    QSettings().setValue("appearance/darkMode", dark);
+
+#ifdef Q_OS_WIN
+    // 保留原生窗口按钮，同时让标题栏、文字与边线真正跟随主题
+    HWND hwnd = reinterpret_cast<HWND>(winId());
+    BOOL immersiveDark = dark ? TRUE : FALSE;
+    DwmSetWindowAttribute(hwnd, 20, &immersiveDark, sizeof(immersiveDark));
+    const COLORREF captionColor = dark ? RGB(32, 32, 36) : RGB(251, 251, 252);
+    const COLORREF textColor = dark ? RGB(236, 235, 239) : RGB(38, 37, 42);
+    const COLORREF borderColor = dark ? RGB(52, 51, 58) : RGB(222, 221, 226);
+    DwmSetWindowAttribute(hwnd, 35, &captionColor, sizeof(captionColor));
+    DwmSetWindowAttribute(hwnd, 36, &textColor, sizeof(textColor));
+    DwmSetWindowAttribute(hwnd, 34, &borderColor, sizeof(borderColor));
+#endif
 }
 
 void MainWindow::updateAlgorithmButtons() {
@@ -566,28 +600,7 @@ void MainWindow::onNewGraph() {
     m_newGraphBtn->setChecked(true);
     m_newTreeBtn->setChecked(false);
 
-    // 设置按钮样式
-    m_newGraphBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #4CAF50;"  // 选中状态绿色
-        "    color: white;"
-        "    font-weight: bold;"
-        "    border: 2px solid #45a049;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #45a049;"
-        "}"
-    );
 
-    m_newTreeBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #f0f0f0;"  // 未选中状态灰色
-        "    border: 1px solid #ccc;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #e0e0e0;"
-        "}"
-    );
 
     m_statusLabel->setText("就绪 | 节点: 0 | 边: 0 | 无向图");
     m_infoPanel->append(QString("[%1] 已创建无向图")
@@ -605,28 +618,7 @@ void MainWindow::onNewTree() {
     m_newTreeBtn->setChecked(true);
     m_newGraphBtn->setChecked(false);
 
-    // 设置按钮样式
-    m_newTreeBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #4CAF50;"  // 选中状态绿色
-        "    color: white;"
-        "    font-weight: bold;"
-        "    border: 2px solid #45a049;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #45a049;"
-        "}"
-    );
 
-    m_newGraphBtn->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #f0f0f0;"  // 未选中状态灰色
-        "    border: 1px solid #ccc;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #e0e0e0;"
-        "}"
-    );
 
     m_statusLabel->setText("就绪 | 节点: 0 | 边: 0 | 树");
     m_infoPanel->append(QString("[%1] 已创建树")
@@ -658,6 +650,7 @@ void MainWindow::onLoad() {
     QApplication::processEvents(); // 刷新UI
 
     if (m_canvas->loadGraph(fileName)) {
+        m_canvas->centerGraphAnimated(true);
         m_infoPanel->append(QString("[%1] 加载成功: %2")
                            .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
                            .arg(fileName));
@@ -679,28 +672,7 @@ void MainWindow::onGraphTypeChanged(int type) {
         m_newGraphBtn->setChecked(true);
         m_newTreeBtn->setChecked(false);
 
-        // 更新按钮样式
-        m_newGraphBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #4CAF50;"
-            "    color: white;"
-            "    font-weight: bold;"
-            "    border: 2px solid #45a049;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #45a049;"
-            "}"
-        );
 
-        m_newTreeBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #f0f0f0;"
-            "    border: 1px solid #ccc;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #e0e0e0;"
-            "}"
-        );
 
         m_statusLabel->setText("就绪 | 节点: 0 | 边: 0 | 无向图");
         m_infoPanel->append(QString("[%1] 切换到无向图模式")
@@ -713,28 +685,7 @@ void MainWindow::onGraphTypeChanged(int type) {
         m_newGraphBtn->setChecked(true);
         m_newTreeBtn->setChecked(false);
 
-        // 更新按钮样式
-        m_newGraphBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #4CAF50;"
-            "    color: white;"
-            "    font-weight: bold;"
-            "    border: 2px solid #45a049;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #45a049;"
-            "}"
-        );
 
-        m_newTreeBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #f0f0f0;"
-            "    border: 1px solid #ccc;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #e0e0e0;"
-            "}"
-        );
 
         m_statusLabel->setText("就绪 | 节点: 0 | 边: 0 | 有向图");
         m_infoPanel->append(QString("[%1] 切换到有向图模式（带箭头）")
@@ -749,6 +700,9 @@ void MainWindow::onRunAlgorithm() {
     if (!m_canvas) return;
 
     GraphCanvas::AlgorithmState state = m_canvas->getAlgorithmState();
+
+    // 用户开始观察算法时，如果图形没有完整出现在视口中，自动平滑展示全图
+    if (state == GraphCanvas::IDLE) m_canvas->ensureGraphVisibleAnimated();
 
     if (state == GraphCanvas::RUNNING) {
         // 如果正在运行，则暂停
@@ -971,6 +925,7 @@ void MainWindow::onStudySystemClicked() {
         connect(m_studyWindow, &StudyWindow::loadGraphRequest,
                 this, [this](const QString& filePath) {
                     if (m_canvas->loadGraph(filePath)) {
+                        m_canvas->centerGraphAnimated(true);
                         m_infoPanel->append(QString("[%1] 从学习系统加载图: %2")
                                            .arg(QDateTime::currentDateTime().toString("hh:mm:ss"))
                                            .arg(QFileInfo(filePath).fileName()));
@@ -989,51 +944,5 @@ void MainWindow::onStudySystemClicked() {
 }
 
 void MainWindow::updateGraphTypeButtons() {
-    if (m_newGraphBtn->isChecked()) {
-        m_newGraphBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #4CAF50;"
-            "    color: white;"
-            "    font-weight: bold;"
-            "    border: 2px solid #45a049;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #45a049;"
-            "}"
-        );
-    } else {
-        m_newGraphBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #f0f0f0;"
-            "    border: 1px solid #ccc;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #e0e0e0;"
-            "}"
-        );
-    }
-
-    if (m_newTreeBtn->isChecked()) {
-        m_newTreeBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #4CAF50;"
-            "    color: white;"
-            "    font-weight: bold;"
-            "    border: 2px solid #45a049;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #45a049;"
-            "}"
-        );
-    } else {
-        m_newTreeBtn->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #f0f0f0;"
-            "    border: 1px solid #ccc;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #e0e0e0;"
-            "}"
-        );
-    }
+    // 图/树按钮的选中态统一由全局 QSS 的 QPushButton:checked 呈现，无需再手动设置内联样式
 }

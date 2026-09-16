@@ -17,6 +17,7 @@ DocumentViewer::DocumentViewer(QWidget* parent)
     : QWidget(parent), m_fontSize(11), m_currentSearchIndex(-1) {
     
     setupUI();
+    onCourseChanged(0);
 }
 
 void DocumentViewer::setupUI() {
@@ -32,39 +33,7 @@ void DocumentViewer::setupUI() {
     m_textEdit->setReadOnly(true);
     m_textEdit->setFont(QFont("Consolas", m_fontSize));
     m_textEdit->setLineWrapMode(QTextEdit::WidgetWidth);
-    m_textEdit->setStyleSheet(
-        "QTextEdit { "
-        "   background-color: #fafafa; "
-        "   padding: 20px; "
-        "   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; "
-        "   font-size: 13px; "
-        "   line-height: 1.6; "
-        "   color: #2c3e50; "
-        "}"
-        "pre { "
-        "   background: #f0f0f0; "
-        "   border: 1px solid #ddd; "
-        "   border-radius: 5px; "
-        "   padding: 12px; "
-        "   margin: 10px 0; "
-        "   font-family: 'Consolas', 'Monaco', monospace; "
-        "   font-size: 11px; "
-        "   overflow-x: auto; "
-        "}"
-        "code { "
-        "   background: #e8e8e8; "
-        "   padding: 2px 6px; "
-        "   border-radius: 3px; "
-        "   font-family: monospace; "
-        "   color: #d63384; "
-        "}"
-        "blockquote { "
-        "   border-left: 4px solid #3498db; "
-        "   margin: 10px 0; "
-        "   padding-left: 15px; "
-        "   color: #7f8c8d; "
-        "}"
-    );
+    m_textEdit->setObjectName("learningDocument");
     
     m_textEdit->setAcceptRichText(true);
     m_textEdit->setTextInteractionFlags(Qt::TextBrowserInteraction);
@@ -76,7 +45,7 @@ void DocumentViewer::setupUI() {
     
     // 状态栏
     m_statusLabel = new QLabel("就绪 | 未加载文档", this);
-    m_statusLabel->setStyleSheet("padding: 5px; color: #666;");
+    m_statusLabel->setObjectName("learningStatus");
     mainLayout->addWidget(m_statusLabel);
 }
 
@@ -88,6 +57,15 @@ void DocumentViewer::setupToolBar() {
     m_openBtn = new QPushButton("📂 打开文档", toolBar);
     m_openBtn->setStyleSheet("padding: 5px 15px;");
     connect(m_openBtn, &QPushButton::clicked, this, &DocumentViewer::onOpenDocument);
+
+    m_courseCombo = new QComboBox(toolBar);
+    m_courseCombo->setMinimumWidth(230);
+    m_courseCombo->addItem("BFS · 广度优先搜索", ":/learning/documents/BFS.md");
+    m_courseCombo->addItem("DFS · 深度优先搜索", ":/learning/documents/DFS.md");
+    m_courseCombo->addItem("Dijkstra · 最短路径", ":/learning/documents/Dijkstra.md");
+    m_courseCombo->addItem("Kruskal · 最小生成树", ":/learning/documents/Kruskal.md");
+    connect(m_courseCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &DocumentViewer::onCourseChanged);
     
     m_zoomInBtn = new QPushButton("A+", toolBar);
     m_zoomInBtn->setToolTip("放大字体");
@@ -123,6 +101,7 @@ void DocumentViewer::setupToolBar() {
     m_searchInfoLabel->setMaximumWidth(120);
     
     layout->addWidget(m_openBtn);
+    layout->addWidget(m_courseCombo);
     layout->addStretch();
     layout->addWidget(new QLabel("字体:", toolBar));
     layout->addWidget(m_zoomOutBtn);
@@ -594,4 +573,8 @@ void DocumentViewer::updateStatus() {
     
     m_statusLabel->setText(QString("已加载: %1 | 字数: %2 | 字体大小: %3")
                           .arg(fileName).arg(wordCount).arg(m_fontSize));
+}
+
+void DocumentViewer::onCourseChanged(int index) {
+    if (index >= 0) loadDocument(m_courseCombo->itemData(index).toString());
 }

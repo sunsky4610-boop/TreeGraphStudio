@@ -18,6 +18,10 @@ add_executable(TreeGraphStudio
     resources.qrc
 )
 
+if(WIN32)
+    target_sources(TreeGraphStudio PRIVATE resources/windows/app.rc)
+endif()
+
 target_link_libraries(TreeGraphStudio PRIVATE 
     Qt5::Core 
     Qt5::Widgets 
@@ -46,6 +50,7 @@ set_target_properties(TreeGraphStudio PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAK
 
 # Windows: 自动复制 Qt 插件
 if(WIN32)
+    target_link_libraries(TreeGraphStudio PRIVATE dwmapi)
     set_target_properties(TreeGraphStudio PROPERTIES SUFFIX ".exe")
     
     # 查找并复制所有存在的插件

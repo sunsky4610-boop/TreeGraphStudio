@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QSlider>
 #include <QLineEdit>
+#include <QComboBox>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QStandardPaths>
@@ -38,6 +39,7 @@ private slots:
     void updateStatus();
     void onPreviousResult();  // 上一个结果
     void onNextResult();      // 下一个结果
+    void onCourseChanged(int index);
 
 private:
     void setupUI();
@@ -52,6 +54,7 @@ private:
 
     // UI组件
     QPushButton* m_openBtn;
+    QComboBox* m_courseCombo;
     QPushButton* m_zoomInBtn;
     QPushButton* m_zoomOutBtn;
     QLineEdit* m_searchEdit;

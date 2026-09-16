@@ -7,6 +7,10 @@
 #include <QGraphicsLineItem>
 #include <QGraphicsPolygonItem>
 #include <QTimer>
+#include <QElapsedTimer>
+#include <QColor>
+#include <QPainter>
+#include <QVariantAnimation>
 #include <QMenu>
 #include <QInputDialog>
 #include <QApplication>
@@ -32,6 +36,8 @@ template<typename GraphType> class DFS;
 template<typename GraphType> class Dijkstra;
 template<typename GraphType> class Kruskal;
 
+class QWheelEvent;
+
 class GraphCanvas : public QGraphicsView {
     Q_OBJECT
 
@@ -47,6 +53,11 @@ public:
     // 图管理
     void setGraphType(GraphType type);
     void clear();
+    // 重置视图到标准数学坐标系(Y 轴朝上)，用于"重置视图"以及新建/加载后自愈文字方向
+    void resetViewTransform();
+    void setDarkMode(bool dark);
+    void centerGraphAnimated(bool fitAll = true);
+    void ensureGraphVisibleAnimated();
     void loadExample();
     
     // 获取图信息
@@ -140,7 +151,9 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void drawBackground(QPainter* painter, const QRectF& rect) override;
     void resizeEvent(QResizeEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
 
 private slots:
     void onNodeVisited(int nodeId);
@@ -159,6 +172,12 @@ private:
         int id;
         bool isDragging{false};
         QPointF originalPos;
+        // —— L2 视觉动画 ——
+        QColor targetColor{QColor(211, 211, 211, 220)};  // 逻辑目标填充色
+        QColor dispColor{QColor(211, 211, 211, 220)};    // 当前显示色（每帧向目标插值）
+        float spawnT{1.0f};        // 创建弹出进度 0→1，1 表示完成
+        float hoverT{0.0f};        // 悬停放大进度 0→1
+        bool wasHighlight{false}; // 上一帧是否高亮（用于边沿触发涟漪）
     };
 
     struct EdgeItem {
@@ -168,6 +187,20 @@ private:
         int from;
         int to;
         bool isHovered{false};
+        // —— L2 视觉动画 ——
+        QColor targetColor{QColor(0, 0, 0, 150)};
+        QColor dispColor{QColor(0, 0, 0, 150)};
+        QColor targetArrowColor{QColor(Qt::black)};
+        QColor dispArrowColor{QColor(Qt::black)};
+        float targetWidth{3.0f};
+        float dispWidth{3.0f};
+        Qt::PenStyle targetStyle{Qt::SolidLine};
+    };
+
+    // 访问节点时向外扩散的涟漪环
+    struct Ripple {
+        QGraphicsEllipseItem* ring{nullptr};
+        float t{0.0f};
     };
 
     struct StepInfo {
@@ -202,6 +235,10 @@ private:
     
     AlgorithmState m_algorithmState{IDLE};
     QTimer* m_animationTimer;
+    QTimer* m_animClock{nullptr};   // L2：60fps 视觉动画时钟
+    QElapsedTimer m_frameTimer;     // 帧间隔计时（帧率无关）
+    qint64 m_lastFrameMs{0};
+    std::vector<Ripple> m_ripples; // 正在扩散的涟漪
     std::set<int> m_highlightedNodes;
     std::vector<std::pair<int, int>> m_highlightedEdges;
     
@@ -232,6 +269,10 @@ private:
     int m_hoveredNode{-1};
     int m_hoveredEdge{-1};
     bool m_isDraggingNode{false};
+    bool m_isPanning{false};
+    QPoint m_lastPanPos;
+    QVariantAnimation* m_centerAnimation{nullptr};
+    bool m_darkMode{false};
     int m_selectedNode{-1};
 
     // 名称-ID映射
@@ -244,6 +285,9 @@ private:
     void updateAllEdges();
     void updateNodeColors();
     void updateEdgeColors();
+    void tickVisualEffects();                          // 60fps 视觉动画推进
+    void spawnRipple(int nodeId);                      // 在节点处生成涟漪
+    static QColor lerpColor(const QColor& a, const QColor& b, float t);
     void updateNodeLabels();
     void updateAxes();
     int findNodeAt(const QPointF& pos) const;

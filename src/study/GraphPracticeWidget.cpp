@@ -26,6 +26,11 @@ void GraphPracticeWidget::setupUI() {
     // 左侧文件列表
     auto* leftPanel = new QWidget(this);
     auto* leftLayout = new QVBoxLayout(leftPanel);
+
+    auto* intro = new QLabel("内置练习库\n选择一个场景，阅读目标后加载到主画布逐步运行。", leftPanel);
+    intro->setObjectName("practiceIntro");
+    intro->setWordWrap(true);
+    leftLayout->addWidget(intro);
     
     auto* dirLayout = new QHBoxLayout();
     m_selectDirBtn = new QPushButton("📁 选择目录", leftPanel);
@@ -91,8 +96,7 @@ void GraphPracticeWidget::refreshFileList() {
     m_graphInfoCache.clear();
     
     if (m_currentDirectory.isEmpty()) {
-        m_currentDirectory = PathUtils::getLearningResourcePath("graphs");
-        QDir().mkpath(m_currentDirectory);
+        m_currentDirectory = ":/learning/graphs";
     }
     
     QDir dir(m_currentDirectory);
@@ -122,6 +126,9 @@ QString GraphPracticeWidget::formatFileInfo(const QFileInfo& info) {
     QJsonObject graphInfo = peekGraphInfo(info.absoluteFilePath());
     
     QString name = info.fileName();
+    if (name == "traversal.graph") name = "01 · 图遍历训练";
+    else if (name == "shortest-path.graph") name = "02 · 最短路径训练";
+    else if (name == "minimum-spanning-tree.graph") name = "03 · 最小生成树训练";
     QString type = graphInfo.value("type").toString();
     int nodeCount = graphInfo.value("nodeCount").toInt();
     int edgeCount = graphInfo.value("edgeCount").toInt();
@@ -180,18 +187,33 @@ void GraphPracticeWidget::onFileSelectionChanged() {
     QString filePath = currentItem->data(Qt::UserRole).toString();
     QJsonObject info = peekGraphInfo(filePath);
     
+    const QString fileName = QFileInfo(filePath).fileName();
+    QString title;
+    QString algorithm;
+    QString mission;
+    if (fileName == "traversal.graph" || fileName.contains("BFS", Qt::CaseInsensitive)) {
+        title = "图遍历：比较 BFS 与 DFS";
+        algorithm = "BFS / DFS";
+        mission = "先从 N0 运行 BFS，观察逐层扩散；重置后运行 DFS，比较访问顺序和待访问结构。";
+    } else if (fileName == "shortest-path.graph" || fileName.contains("dijkstra", Qt::CaseInsensitive)) {
+        title = "加权图：寻找最低代价路径";
+        algorithm = "Dijkstra 最短路径";
+        mission = "选择 N0 为起点、N6 为终点，逐步观察距离松弛，并判断为什么局部最短边不一定属于最终路径。";
+    } else {
+        title = "连通网：构造最小生成树";
+        algorithm = "Kruskal 最小生成树";
+        mission = "按边权从小到大观察选边过程，重点辨认会形成环而被拒绝的边，并核对最终总权重。";
+    }
+
     QString previewText = QString(
-        "<b>文件名:</b> %1<br/>"
-        "<b>类型:</b> %2<br/>"
-        "<b>节点数量:</b> %3<br/>"
-        "<b>边数量:</b> %4<br/>"
-        "<b>路径:</b> %5<br/><br/>"
-        "<i>双击文件或点击\"加载到主窗口\"按钮在主界面中打开此图</i>"
-    ).arg(QFileInfo(filePath).fileName())
+        "<h2>%1</h2>"
+        "<p><b>推荐算法：</b>%2</p>"
+        "<p><b>练习目标：</b>%3</p>"
+        "<hr/><p><b>图类型：</b>%4　 <b>节点：</b>%5　 <b>边：</b>%6</p>"
+        "<p style='color:#8b5cf6'><b>操作：</b>加载后选择对应算法，使用“下一步”观察每一次状态变化。</p>"
+    ).arg(title).arg(algorithm).arg(mission)
      .arg(info.value("type").toString() == "directed" ? "有向图" : "无向图")
-     .arg(info.value("nodeCount").toInt())
-     .arg(info.value("edgeCount").toInt())
-     .arg(filePath);
+     .arg(info.value("nodeCount").toInt()).arg(info.value("edgeCount").toInt());
     
     m_previewLabel->setText(previewText);
     m_loadBtn->setEnabled(info.value("nodeCount").toInt() > 0);

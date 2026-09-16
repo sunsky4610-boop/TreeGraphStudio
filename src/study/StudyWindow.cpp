@@ -20,7 +20,7 @@ void StudyWindow::setupUI() {
     // 标题
     auto* titleLabel = new QLabel("TreeGraph Studio 学习系统", this);
     titleLabel->setAlignment(Qt::AlignCenter);
-    titleLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #2c3e50; margin: 10px;");
+    titleLabel->setObjectName("studyTitle");
     mainLayout->addWidget(titleLabel);
     
     // 标签页

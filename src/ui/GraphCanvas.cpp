@@ -1,4 +1,7 @@
 #include "GraphCanvas.h"
+#include <QWheelEvent>
+#include <QScrollBar>
+#include <QEasingCurve>
 #include "../core/Graph.h"
 #include "../core/Tree.h"
 #include "../algorithms/Traversal.h"
@@ -18,6 +21,27 @@
 #include <cmath>
 #include <functional>
 #include <queue>
+#include <QRadialGradient>
+#include <QElapsedTimer>
+
+namespace {
+
+// 根据节点填充色生成带轻微高光的径向渐变，让节点更有立体感
+QBrush makeNodeBrush(const QColor& c) {
+    QRadialGradient g(QPointF(-9.0, -11.0), 36.0);
+    g.setColorAt(0.0, c.lighter(118));
+    g.setColorAt(1.0, c.darker(107));
+    return QBrush(g);
+}
+
+// 弹性缓出（结尾轻微过冲，更有手感）
+float easeOutBack(float x) {
+    const float c1 = 1.70158f;
+    const float c3 = c1 + 1.0f;
+    return 1.0f + c3 * std::pow(x - 1.0f, 3) + c1 * std::pow(x - 1.0f, 2);
+}
+
+}  // namespace
 
 // 析构函数
 GraphCanvas::AlgorithmWrapper::~AlgorithmWrapper() {
@@ -65,12 +89,23 @@ GraphCanvas::GraphCanvas(QWidget* parent)
       m_animationTimer(new QTimer(this)) {
 
     setScene(m_scene);
+    // 预留足够大的工作区，确保即使图很小也能自由平移视图
+    m_scene->setSceneRect(-5000, -5000, 10000, 10000);
     setRenderHint(QPainter::Antialiasing);
+    setBackgroundBrush(QColor("#f5f7fb"));
     // 整屏刷新视口：默认 MinimalViewportUpdate 在 Y 轴翻转 + 子图元变换下算不全重绘区域，拖动节点会留残影
     setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     setMouseTracking(true);
-    setDragMode(QGraphicsView::RubberBandDrag);
+    // 不使用橡皮筋框选，避免在空白处拖动时出现蓝色框选矩形；节点移动/添加/连线均不受影响
+    setDragMode(QGraphicsView::NoDrag);
     setCursor(Qt::ArrowCursor);
+
+    // L2：60fps 视觉动画时钟（颜色插值 / 节点弹出 / 涟漪）；无变化时不触发重绘，开销极低
+    m_frameTimer.start();
+    m_lastFrameMs = m_frameTimer.elapsed();
+    m_animClock = new QTimer(this);
+    connect(m_animClock, &QTimer::timeout, this, &GraphCanvas::tickVisualEffects);
+    m_animClock->start(16);
 
     scale(1, -1);
 
@@ -78,6 +113,70 @@ GraphCanvas::GraphCanvas(QWidget* parent)
 
     setGraphType(UNDIRECTED_GRAPH);
     loadExample();
+}
+
+// 恢复标准数学坐标系视图(Y 轴朝上)。所有正立文字都依赖这次 Y 翻转来抵消自身的 scale(1,-1)
+void GraphCanvas::resetViewTransform() {
+    resetTransform();
+    scale(1, -1);
+}
+
+void GraphCanvas::setDarkMode(bool dark) {
+    m_darkMode = dark;
+    setBackgroundBrush(QColor(dark ? "#18181b" : "#f5f7fb"));
+
+    const QColor outline = dark ? QColor("#d4d4d8") : QColor("#111827");
+    const QColor label = dark ? QColor("#f4f4f5") : QColor("#111827");
+    const QColor secondary = dark ? QColor("#a1a1aa") : QColor("#52525b");
+    for (auto& [id, item] : m_nodeItems) {
+        Q_UNUSED(id);
+        if (item.shape) item.shape->setPen(QPen(outline, 2));
+        if (item.label) item.label->setBrush(label);
+        if (item.coordinateLabel) item.coordinateLabel->setBrush(secondary);
+    }
+    for (auto& edge : m_edgeItems) {
+        if (edge && edge->weight)
+            edge->weight->setBrush(dark ? QColor("#fca5a5") : QColor("#991b1b"));
+    }
+    updateNodeColors();
+    updateEdgeColors();
+    if (m_showAxes) updateAxes();
+    viewport()->update();
+}
+
+// 鼠标滚轮缩放：以光标位置为锚点，并把缩放倍率限制在约 0.35x ~ 4x
+void GraphCanvas::wheelEvent(QWheelEvent* event) {
+    const int dy = event->angleDelta().y();
+    if (dy == 0) {
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
+
+    const double step = (dy > 0) ? 1.15 : (1.0 / 1.15);
+    const double current = qAbs(transform().m11());
+    const double kMin = 0.35, kMax = 4.0;
+
+    double factor = step;
+    const double next = current * step;
+    if (next < kMin) {
+        factor = kMin / current;
+    } else if (next > kMax) {
+        factor = kMax / current;
+    }
+    if (qAbs(factor - 1.0) < 1e-4) {
+        event->accept();
+        return;
+    }
+
+    // 以光标下的场景点为锚点：缩放后用滚动条补偿，让该点始终停在光标处
+    const QPointF sceneBefore = mapToScene(event->pos());
+    scale(factor, factor);
+    const QPointF viewAfter = mapFromScene(sceneBefore);
+    const QPointF drift = viewAfter - QPointF(event->pos());
+
+    horizontalScrollBar()->setValue(horizontalScrollBar()->value() + int(drift.x()));
+    verticalScrollBar()->setValue(verticalScrollBar()->value() + int(drift.y()));
+    event->accept();
 }
 
 // ============================================
@@ -140,6 +239,7 @@ void GraphCanvas::clear() {
     // 清除所有UI状态
     m_nodeItems.clear();
     m_edgeItems.clear();
+    m_ripples.clear();
     m_nodeNames.clear();
     m_nameToId.clear();
     m_nextNodeId = 0;
@@ -186,6 +286,9 @@ void GraphCanvas::clear() {
     if (m_showAxes) {
         updateAxes();
     }
+
+    // 新建/清空后恢复标准 Y 翻转视图，保证文字方向正确
+    resetViewTransform();
 }
 
 void GraphCanvas::loadExample() {
@@ -438,16 +541,22 @@ void GraphCanvas::createNode(double x, double y, const std::string& label) {
     NodeItem item;
     item.id = actualId;
     item.originalPos = QPointF(x, y);
+    if (m_darkMode) {
+        item.targetColor = item.dispColor = QColor(63, 63, 70, 235);
+    }
 
-    QPen nodePen(Qt::black, 2);
+    QPen nodePen(m_darkMode ? QColor("#d4d4d8") : QColor("#111827"), 2);
     nodePen.setJoinStyle(Qt::RoundJoin);
-    item.shape = m_scene->addEllipse(-25, -25, 50, 50, nodePen, QBrush(Qt::lightGray));
+    item.shape = m_scene->addEllipse(-25, -25, 50, 50, nodePen, makeNodeBrush(item.dispColor));
     item.shape->setPos(x, y);
     item.shape->setZValue(10);
+    // 创建弹出动画：从 0.55 倍弹性放大到 1
+    item.spawnT = 0.0f;
+    item.shape->setTransform(QTransform::fromScale(0.55, 0.55));
 
     item.label = new QGraphicsSimpleTextItem(QString::fromStdString(displayLabel));
     item.label->setPos(-item.label->boundingRect().width()/2, -35);
-    item.label->setBrush(Qt::black);
+    item.label->setBrush(m_darkMode ? QColor("#f4f4f5") : QColor("#111827"));
     item.label->setFont(QFont("Arial", 10, QFont::Bold));
     item.label->setZValue(20);
     item.label->setParentItem(item.shape);
@@ -455,7 +564,7 @@ void GraphCanvas::createNode(double x, double y, const std::string& label) {
 
     item.coordinateLabel = new QGraphicsSimpleTextItem(QString("(%1, %2)").arg(x).arg(y));
     item.coordinateLabel->setPos(-item.coordinateLabel->boundingRect().width()/2, 30);
-    item.coordinateLabel->setBrush(Qt::darkGray);
+    item.coordinateLabel->setBrush(m_darkMode ? QColor("#a1a1aa") : QColor("#52525b"));
     item.coordinateLabel->setFont(QFont("Arial", 8));
     item.coordinateLabel->setVisible(m_showCoordinates);
     item.coordinateLabel->setZValue(20);
@@ -496,7 +605,7 @@ void GraphCanvas::createEdge(int from, int to, int weight) {
     QPointF fromEdge = getNodeEdgePoint(from, QPointF(toX, toY));
     QPointF toEdge = getNodeEdgePoint(to, QPointF(fromX, fromY));
 
-    QPen edgePen(Qt::black, 3);
+    QPen edgePen(m_darkMode ? QColor("#a1a1aa") : QColor("#1f2937"), 3);
     edgePen.setCapStyle(Qt::RoundCap);
     item->line = m_scene->addLine(
         fromEdge.x(), fromEdge.y(),
@@ -504,6 +613,14 @@ void GraphCanvas::createEdge(int from, int to, int weight) {
         edgePen
     );
     item->line->setZValue(5);
+
+    // 边外观动画初值（与默认画笔一致）
+    item->targetColor = item->dispColor = m_darkMode ? QColor(161, 161, 170, 190)
+                                                     : QColor(30, 35, 45, 150);
+    item->targetArrowColor = item->dispArrowColor = m_darkMode ? QColor("#d4d4d8")
+                                                               : QColor("#1f2937");
+    item->targetWidth = item->dispWidth = 3.0f;
+    item->targetStyle = Qt::SolidLine;
 
     if (m_graphType == DIRECTED_GRAPH) {
         drawArrow(item.get(), fromEdge.x(), fromEdge.y(), toEdge.x(), toEdge.y());
@@ -521,7 +638,7 @@ void GraphCanvas::createEdge(int from, int to, int weight) {
     transform.scale(1, -1);  // 反转Y轴，使文字正立
     item->weight->setTransform(transform);
 
-    item->weight->setBrush(Qt::darkRed);
+    item->weight->setBrush(m_darkMode ? QColor("#fca5a5") : QColor("#991b1b"));
     item->weight->setFont(QFont("Arial", 9, QFont::Bold));
     item->weight->setVisible(m_showWeights);
     item->weight->setZValue(15);
@@ -561,9 +678,10 @@ void GraphCanvas::drawArrow(EdgeItem* edgeItem, double fromX, double fromY, doub
     QPolygonF arrowHead;
     arrowHead << arrowP1 << arrowP2 << arrowP3;
 
-    QPen arrowPen(Qt::black, 2);
+    QColor arrowCol = edgeItem->dispArrowColor.isValid() ? edgeItem->dispArrowColor : QColor(Qt::black);
+    QPen arrowPen(arrowCol, 2);
     arrowPen.setJoinStyle(Qt::RoundJoin);
-    edgeItem->arrow = m_scene->addPolygon(arrowHead, arrowPen, QBrush(Qt::black));
+    edgeItem->arrow = m_scene->addPolygon(arrowHead, arrowPen, QBrush(arrowCol));
     edgeItem->arrow->setZValue(6);
 }
 
@@ -576,19 +694,7 @@ void GraphCanvas::setMode(Mode mode) {
     m_hoveredNode = -1;
     m_hoveredEdge = -1;
 
-    for (auto& [id, item] : m_nodeItems) {
-        if (item.shape) {
-            item.shape->setBrush(QBrush(Qt::lightGray));
-        }
-    }
-
-    for (auto& edgeItem : m_edgeItems) {
-        if (edgeItem->line) {
-            QPen pen(Qt::black, 3);
-            pen.setCapStyle(Qt::RoundCap);
-            edgeItem->line->setPen(pen);
-        }
-    }
+    // 节点/边外观由本函数末尾的 updateNodeColors/updateEdgeColors 设定目标色，再由动画时钟平滑过渡
 
     switch(m_mode) {
         case SELECT:
@@ -632,17 +738,29 @@ void GraphCanvas::updateAllEdges() {
 void GraphCanvas::updateNodeColors() {
     for (auto& [id, item] : m_nodeItems) {
         if (!item.shape) continue;
-        if (m_highlightedNodes.count(id) && !item.isDragging) {
-            item.shape->setBrush(QBrush(QColor(255, 255, 0, 200)));
-        } else if (m_edgeStartNode == id) {
-            item.shape->setBrush(QBrush(Qt::green));
+
+        QColor target;
+        bool highlighted = false;
+        if (item.isDragging) {
+            target = QColor(202, 160, 99, 225);                // 拖动：低饱和香槟金
+        } else if (m_edgeStartNode == id || m_selectedNode == id) {
+            target = QColor(139, 92, 246, 235);                // 连边起点 / 选中：紫罗兰
+        } else if (m_highlightedNodes.count(id)) {
+            target = QColor(196, 181, 253, 235);               // 算法访问：柔和薰衣草
+            highlighted = true;
         } else if (m_hoveredNode == id && m_mode == SELECT && !item.isDragging) {
-            item.shape->setBrush(QBrush(QColor(0, 255, 255, 200)));
-        } else if (item.isDragging) {
-            item.shape->setBrush(QBrush(QColor(255, 165, 0, 200)));
+            // 悬停主要用平滑放大反馈，颜色只做克制的中性提亮
+            target = m_darkMode ? QColor(82, 82, 91, 235)
+                                : QColor(224, 224, 228, 225);
         } else {
-            item.shape->setBrush(QBrush(QColor(211, 211, 211, 200)));
+            target = m_darkMode ? QColor(63, 63, 70, 235)
+                                : QColor(211, 211, 211, 220);   // 默认节点
         }
+
+        // 刚进入访问状态时触发一次扩散涟漪
+        if (highlighted && !item.wasHighlight) spawnRipple(id);
+        item.wasHighlight = highlighted;
+        item.targetColor = target;
     }
 }
 
@@ -650,14 +768,13 @@ void GraphCanvas::updateEdgeColors() {
     for (size_t i = 0; i < m_edgeItems.size(); ++i) {
         if (!m_edgeItems[i] || !m_edgeItems[i]->line) continue;
 
-        QPen pen;
         int from = m_edgeItems[i]->from;
         int to = m_edgeItems[i]->to;
 
         bool isHighlighted = false;
         bool isRejected = false;
 
-        // 1. 检查是否被拒边（最高优先级）
+        // 1. 被拒边（最高优先级）
         for (const auto& rejectedEdge : m_rejectedEdges) {
             if ((rejectedEdge.first == from && rejectedEdge.second == to) ||
                 (!isDirectedGraph() && rejectedEdge.first == to && rejectedEdge.second == from)) {
@@ -666,47 +783,173 @@ void GraphCanvas::updateEdgeColors() {
             }
         }
 
-        // 2. 检查是否悬停
-        if (m_hoveredEdge == static_cast<int>(i) && m_mode == SELECT) {
-            pen = QPen(QColor(0, 0, 255, 200), 4);  // 蓝色悬停
-            isHighlighted = true;
-        }
-        // 3. 检查是否被选中（MST边）
-        else if (!isRejected) {
-            for (const auto& highlightedEdge : m_highlightedEdges) {
-                if ((highlightedEdge.first == from && highlightedEdge.second == to) ||
-                    (!isDirectedGraph() && highlightedEdge.first == to && highlightedEdge.second == from)) {
-                    isHighlighted = true;
-                    break;
+        // 2. 悬停 / 3. 算法选中
+        if (!isRejected) {
+            if (m_hoveredEdge == static_cast<int>(i) && m_mode == SELECT) {
+                isHighlighted = true;
+            } else {
+                for (const auto& highlightedEdge : m_highlightedEdges) {
+                    if ((highlightedEdge.first == from && highlightedEdge.second == to) ||
+                        (!isDirectedGraph() && highlightedEdge.first == to && highlightedEdge.second == from)) {
+                        isHighlighted = true;
+                        break;
+                    }
                 }
             }
-
-            if (isHighlighted) {
-                pen = QPen(QColor(255, 255, 0, 200), 3);  // 黄色选中
-            } else {
-                pen = QPen(QColor(0, 0, 0, 150), 3);      // 默认黑色
-            }
         }
 
-        // 被拒边样式（红色虚线）
+        // 只设置“目标外观”，真正的颜色/粗细由 60fps 动画时钟平滑过渡
         if (isRejected) {
-            pen = QPen(QColor(255, 0, 0, 150), 3, Qt::DashLine);  // 红色虚线
-        }
-
-        pen.setCapStyle(Qt::RoundCap);
-        m_edgeItems[i]->line->setPen(pen);
-
-        // 更新箭头颜色
-        if (m_edgeItems[i]->arrow) {
-            if (isRejected) {
-                m_edgeItems[i]->arrow->setBrush(QBrush(QColor(255, 0, 0, 150)));
-            } else {
-                m_edgeItems[i]->arrow->setBrush(isHighlighted ?
-                    QBrush(QColor(255, 255, 0, 200)) : QBrush(Qt::black));
-            }
+            m_edgeItems[i]->targetColor = QColor(244, 114, 182, 185);
+            m_edgeItems[i]->targetArrowColor = QColor(244, 114, 182, 185);
+            m_edgeItems[i]->targetWidth = 3.0f;
+            m_edgeItems[i]->targetStyle = Qt::DashLine;
+        } else if (m_hoveredEdge == static_cast<int>(i) && m_mode == SELECT) {
+            m_edgeItems[i]->targetColor = QColor(167, 139, 250, 220);
+            m_edgeItems[i]->targetArrowColor = QColor(167, 139, 250, 220);
+            m_edgeItems[i]->targetWidth = 4.0f;
+            m_edgeItems[i]->targetStyle = Qt::SolidLine;
+        } else if (isHighlighted) {
+            m_edgeItems[i]->targetColor = QColor(196, 181, 253, 225);
+            m_edgeItems[i]->targetArrowColor = QColor(196, 181, 253, 225);
+            m_edgeItems[i]->targetWidth = 3.5f;
+            m_edgeItems[i]->targetStyle = Qt::SolidLine;
+        } else {
+            m_edgeItems[i]->targetColor = m_darkMode ? QColor(161, 161, 170, 190)
+                                                     : QColor(30, 35, 45, 150);
+            m_edgeItems[i]->targetArrowColor = m_darkMode ? QColor(212, 212, 216, 210)
+                                                          : QColor(30, 35, 45, 200);
+            m_edgeItems[i]->targetWidth = 3.0f;
+            m_edgeItems[i]->targetStyle = Qt::SolidLine;
         }
     }
 }
+
+QColor GraphCanvas::lerpColor(const QColor& a, const QColor& b, float t) {
+    t = qBound(0.0f, t, 1.0f);
+    auto ch = [&](int x, int y) { return static_cast<int>(x + (y - x) * t); };
+    return QColor(ch(a.red(), b.red()), ch(a.green(), b.green()),
+                  ch(a.blue(), b.blue()), ch(a.alpha(), b.alpha()));
+}
+
+void GraphCanvas::spawnRipple(int nodeId) {
+    auto it = m_nodeItems.find(nodeId);
+    if (it == m_nodeItems.end() || !it->second.shape) return;
+    QPointF p = it->second.shape->scenePos();
+    auto* ring = m_scene->addEllipse(-24, -24, 48, 48,
+                                     QPen(QColor(167, 139, 250, 205), 3), Qt::NoBrush);
+    ring->setPos(p);
+    ring->setZValue(8);
+    m_ripples.push_back(Ripple{ring, 0.0f});
+}
+
+// 60fps 视觉动画：节点颜色/弹出、边颜色/粗细、涟漪，全部按真实帧间隔平滑推进
+void GraphCanvas::tickVisualEffects() {
+    qint64 now = m_frameTimer.elapsed();
+    float dt = (now - m_lastFrameMs) / 1000.0f;
+    m_lastFrameMs = now;
+    dt = qBound(0.001f, dt, 0.05f);
+
+    const float tau = 0.10f;  // 颜色过渡时间常数（秒），越小越干脆
+    const float k = 1.0f - std::exp(-dt / tau);
+
+    // 节点：颜色平滑 + 创建弹出 + 悬停缩放
+    for (auto& [id, item] : m_nodeItems) {
+        if (!item.shape) continue;
+
+        if (item.dispColor != item.targetColor) {
+            item.dispColor = lerpColor(item.dispColor, item.targetColor, k);
+            item.shape->setBrush(makeNodeBrush(item.dispColor));
+        }
+
+        float spawnScale = 1.0f;
+        if (item.spawnT < 1.0f) {
+            item.spawnT = qMin(1.0f, item.spawnT + dt / 0.38f);
+            spawnScale = 0.55f + 0.45f * easeOutBack(item.spawnT);
+        }
+
+        const float hoverTarget = (m_hoveredNode == id && m_mode == SELECT && !item.isDragging)
+                                      ? 1.0f : 0.0f;
+        const float hoverK = 1.0f - std::exp(-dt / 0.085f);
+        item.hoverT += (hoverTarget - item.hoverT) * hoverK;
+        if (std::abs(item.hoverT - hoverTarget) < 0.002f) item.hoverT = hoverTarget;
+        const float smoothHover = item.hoverT * item.hoverT * (3.0f - 2.0f * item.hoverT);
+        const float scaleValue = spawnScale * (1.0f + 0.12f * smoothHover);
+        item.shape->setTransform(QTransform::fromScale(scaleValue, scaleValue));
+    }
+
+    // 边：颜色与粗细平滑（线型如实线/虚线按目标即时切换）
+    for (auto& e : m_edgeItems) {
+        if (!e || !e->line) continue;
+        bool edgeDirty = false;
+        if (e->dispColor != e->targetColor) {
+            e->dispColor = lerpColor(e->dispColor, e->targetColor, k);
+            edgeDirty = true;
+        }
+        if (std::abs(e->dispWidth - e->targetWidth) > 0.02f) {
+            e->dispWidth += (e->targetWidth - e->dispWidth) * k;
+            edgeDirty = true;
+        }
+        if (edgeDirty) {
+            QPen pen(e->dispColor, e->dispWidth, e->targetStyle);
+            pen.setCapStyle(Qt::RoundCap);
+            e->line->setPen(pen);
+        }
+        if (e->arrow && e->dispArrowColor != e->targetArrowColor) {
+            e->dispArrowColor = lerpColor(e->dispArrowColor, e->targetArrowColor, k);
+            e->arrow->setBrush(QBrush(e->dispArrowColor));
+            QPen ap(e->dispArrowColor, 2);
+            ap.setJoinStyle(Qt::RoundJoin);
+            e->arrow->setPen(ap);
+        }
+    }
+
+    // 涟漪：向外扩散并淡出
+    for (auto it = m_ripples.begin(); it != m_ripples.end();) {
+        it->t += dt / 0.5f;
+        if (it->t >= 1.0f) {
+            m_scene->removeItem(it->ring);
+            delete it->ring;
+            it = m_ripples.erase(it);
+            continue;
+        }
+        float e = 1.0f - (1.0f - it->t) * (1.0f - it->t);  // easeOutQuad
+        float r = 24.0f + 34.0f * e;
+        int alpha = static_cast<int>(220 * (1.0f - it->t));
+        QPen pen(QColor(167, 139, 250, alpha), 3.0f * (1.0f - it->t) + 0.5f);
+        pen.setCapStyle(Qt::RoundCap);
+        it->ring->setRect(-r, -r, 2.0 * r, 2.0 * r);
+        it->ring->setPen(pen);
+        ++it;
+    }
+}
+
+// 点阵网格背景（场景坐标，随视图平移/缩放对齐）
+void GraphCanvas::drawBackground(QPainter* painter, const QRectF& rect) {
+    QGraphicsView::drawBackground(painter, rect);
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    QPen dot(m_darkMode ? QColor(82, 82, 91, 105)
+                        : QColor(168, 178, 196, 110));
+    dot.setWidthF(1.6);
+    dot.setCapStyle(Qt::RoundCap);
+    painter->setPen(dot);
+
+    const qreal grid = 40.0;
+    qreal x0 = std::floor(rect.left() / grid) * grid;
+    qreal y0 = std::floor(rect.top() / grid) * grid;
+    QPolygonF points;
+    points.reserve(2048);
+    for (qreal x = x0; x <= rect.right(); x += grid) {
+        for (qreal y = y0; y <= rect.bottom(); y += grid) {
+            points << QPointF(x, y);
+        }
+    }
+    painter->drawPoints(points);
+    painter->restore();
+}
+
 
 void GraphCanvas::updateNodeLabels() {
     for (auto& [id, item] : m_nodeItems) {
@@ -740,7 +983,8 @@ void GraphCanvas::updateAxes() {
         sceneRect = QRectF(-100, -100, 600, 600);
     }
 
-    QPen axisPen(Qt::gray, 1, Qt::DashLine);
+    const QColor axisColor = m_darkMode ? QColor("#71717a") : QColor("#80838a");
+    QPen axisPen(axisColor, 1, Qt::DashLine);
     m_xAxis = m_scene->addLine(sceneRect.left(), 0, sceneRect.right(), 0, axisPen);
     m_xAxis->setZValue(1);
 
@@ -751,7 +995,7 @@ void GraphCanvas::updateAxes() {
         if (x != 0) {
             QGraphicsSimpleTextItem* label = new QGraphicsSimpleTextItem(QString::number(x));
             label->setPos(x - 10, 5);
-            label->setBrush(Qt::gray);
+            label->setBrush(axisColor);
             label->setFont(QFont("Arial", 7));
             label->setZValue(1);
             m_scene->addItem(label);
@@ -764,7 +1008,7 @@ void GraphCanvas::updateAxes() {
         if (y != 0) {
             QGraphicsSimpleTextItem* label = new QGraphicsSimpleTextItem(QString::number(y));
             label->setPos(5, y - 7);
-            label->setBrush(Qt::gray);
+            label->setBrush(axisColor);
             label->setFont(QFont("Arial", 7));
             label->setZValue(1);
             m_scene->addItem(label);
@@ -775,7 +1019,7 @@ void GraphCanvas::updateAxes() {
 
     QGraphicsSimpleTextItem* originLabel = new QGraphicsSimpleTextItem("(0,0)");
     originLabel->setPos(5, 5);
-    originLabel->setBrush(Qt::darkGray);
+    originLabel->setBrush(axisColor);
     originLabel->setFont(QFont("Arial", 8, QFont::Bold));
     originLabel->setZValue(1);
     m_scene->addItem(originLabel);
@@ -816,12 +1060,22 @@ int GraphCanvas::findEdgeAt(const QPointF& pos) const {
 }
 
 void GraphCanvas::mousePressEvent(QMouseEvent* event) {
-    QGraphicsView::mousePressEvent(event);
     auto pos = mapToScene(event->pos());
 
     if (event->button() == Qt::LeftButton) {
         int nodeId = findNodeAt(pos);
         int edgeIndex = findEdgeAt(pos);
+
+        // 选择模式下拖动空白区域平移视图，不影响节点拖动、添加节点或连边
+        if (m_mode == SELECT && nodeId == -1 && edgeIndex == -1) {
+            if (m_centerAnimation) m_centerAnimation->stop();
+            m_isPanning = true;
+            m_lastPanPos = event->pos();
+            setCursor(Qt::ClosedHandCursor);
+            setSelectedNode(-1);
+            event->accept();
+            return;
+        }
 
         switch(m_mode) {
             case ADD_NODE:
@@ -834,16 +1088,12 @@ void GraphCanvas::mousePressEvent(QMouseEvent* event) {
                 if (nodeId != -1) {
                     if (m_edgeStartNode == -1) {
                         m_edgeStartNode = nodeId;
-                        if (m_nodeItems.count(m_edgeStartNode) && m_nodeItems[m_edgeStartNode].shape) {
-                            m_nodeItems[m_edgeStartNode].shape->setBrush(QBrush(Qt::green));
-                        }
+                        updateNodeColors();
                     } else if (m_edgeStartNode != nodeId) {
                         if (hasEdge(m_edgeStartNode, nodeId)) {
                             QMessageBox::information(this, "提示", "边已存在！");
-                            if (m_nodeItems.count(m_edgeStartNode) && m_nodeItems[m_edgeStartNode].shape) {
-                                m_nodeItems[m_edgeStartNode].shape->setBrush(QBrush(Qt::lightGray));
-                            }
                             m_edgeStartNode = -1;
+                            updateNodeColors();
                             return;
                         }
                         bool ok;
@@ -851,10 +1101,8 @@ void GraphCanvas::mousePressEvent(QMouseEvent* event) {
                         if (ok) {
                             createEdge(m_edgeStartNode, nodeId, weight);
                         }
-                        if (m_nodeItems.count(m_edgeStartNode) && m_nodeItems[m_edgeStartNode].shape) {
-                            m_nodeItems[m_edgeStartNode].shape->setBrush(QBrush(Qt::lightGray));
-                        }
                         m_edgeStartNode = -1;
+                        updateNodeColors();
                     }
                 }
                 break;
@@ -890,9 +1138,19 @@ void GraphCanvas::mousePressEvent(QMouseEvent* event) {
             showEdgeContextMenu(edgeIndex, event->globalPos());
         }
     }
+    QGraphicsView::mousePressEvent(event);
 }
 
 void GraphCanvas::mouseMoveEvent(QMouseEvent* event) {
+    if (m_isPanning && (event->buttons() & Qt::LeftButton)) {
+        const QPoint delta = event->pos() - m_lastPanPos;
+        m_lastPanPos = event->pos();
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - delta.x());
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - delta.y());
+        event->accept();
+        return;
+    }
+
     QGraphicsView::mouseMoveEvent(event);
     auto pos = mapToScene(event->pos());
     int oldHoveredNode = m_hoveredNode;
@@ -982,6 +1240,13 @@ void GraphCanvas::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void GraphCanvas::mouseReleaseEvent(QMouseEvent* event) {
+    if (m_isPanning && event->button() == Qt::LeftButton) {
+        m_isPanning = false;
+        setCursor(Qt::ArrowCursor);
+        event->accept();
+        return;
+    }
+
     QGraphicsView::mouseReleaseEvent(event);
     if (m_isDraggingNode) {
         for (auto& [id, nodeItem] : m_nodeItems) {
@@ -1002,10 +1267,91 @@ void GraphCanvas::mouseReleaseEvent(QMouseEvent* event) {
 
 void GraphCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
     auto pos = mapToScene(event->pos());
+    int nodeId = findNodeAt(pos);
     int edgeIndex = findEdgeAt(pos);
     if (edgeIndex != -1) {
         onWeightEditRequested(edgeIndex);
+        event->accept();
+    } else if (nodeId == -1) {
+        centerGraphAnimated();
+        event->accept();
+    } else {
+        QGraphicsView::mouseDoubleClickEvent(event);
     }
+}
+
+void GraphCanvas::centerGraphAnimated(bool fitAll) {
+    QRectF graphBounds;
+    bool hasNodes = false;
+    for (const auto& [id, item] : m_nodeItems) {
+        Q_UNUSED(id);
+        if (!item.shape) continue;
+        graphBounds = hasNodes ? graphBounds.united(item.shape->sceneBoundingRect())
+                               : item.shape->sceneBoundingRect();
+        hasNodes = true;
+    }
+    if (!hasNodes) return;
+
+    if (m_centerAnimation) {
+        m_centerAnimation->stop();
+        m_centerAnimation->deleteLater();
+    }
+
+    const QPointF start = mapToScene(viewport()->rect().center());
+    const QPointF target = graphBounds.center();
+    const double startScale = qAbs(transform().m11());
+    double targetScale = startScale;
+    if (fitAll) {
+        const double availableWidth = qMax(120, viewport()->width() - 120);
+        const double availableHeight = qMax(120, viewport()->height() - 120);
+        const double sx = availableWidth / qMax(1.0, graphBounds.width());
+        const double sy = availableHeight / qMax(1.0, graphBounds.height());
+        targetScale = qBound(0.35, qMin(sx, sy), 1.35);
+    }
+
+    const double pixelDistance = QLineF(mapFromScene(start), mapFromScene(target)).length();
+    const double zoomDistance = qAbs(targetScale - startScale) * 420.0;
+    const int duration = qBound(300, int(260.0 + std::sqrt(pixelDistance + zoomDistance) * 18.0), 720);
+
+    m_centerAnimation = new QVariantAnimation(this);
+    m_centerAnimation->setDuration(duration);
+    m_centerAnimation->setStartValue(0.0);
+    m_centerAnimation->setEndValue(1.0);
+    // OutExpo：远距离阶段推进快，接近目标后自然、柔和地减速
+    m_centerAnimation->setEasingCurve(QEasingCurve::OutExpo);
+    connect(m_centerAnimation, &QVariantAnimation::valueChanged, this,
+            [this, start, target, startScale, targetScale](const QVariant& value) {
+                const double t = value.toDouble();
+                const QPointF center = start + (target - start) * t;
+                const double scaleValue = startScale + (targetScale - startScale) * t;
+                resetTransform();
+                scale(scaleValue, -scaleValue);
+                centerOn(center);
+            });
+    connect(m_centerAnimation, &QVariantAnimation::finished, this, [this]() {
+        if (m_centerAnimation) {
+            m_centerAnimation->deleteLater();
+            m_centerAnimation = nullptr;
+        }
+    });
+    m_centerAnimation->start();
+}
+
+void GraphCanvas::ensureGraphVisibleAnimated() {
+    QRectF graphBounds;
+    bool hasNodes = false;
+    for (const auto& [id, item] : m_nodeItems) {
+        Q_UNUSED(id);
+        if (!item.shape) continue;
+        graphBounds = hasNodes ? graphBounds.united(item.shape->sceneBoundingRect())
+                               : item.shape->sceneBoundingRect();
+        hasNodes = true;
+    }
+    if (!hasNodes) return;
+
+    const QRect safeViewport = viewport()->rect().adjusted(50, 50, -50, -50);
+    const QRectF visibleScene = mapToScene(safeViewport).boundingRect();
+    if (!visibleScene.contains(graphBounds)) centerGraphAnimated(true);
 }
 
 void GraphCanvas::leaveEvent(QEvent* event) {
@@ -1765,6 +2111,7 @@ void GraphCanvas::pauseAlgorithm() {
 
 void GraphCanvas::resumeAlgorithm() {
     if (m_algorithmState == PAUSED) {
+        centerGraphAnimated(true);
         m_algorithmState = RUNNING;
         int interval = 1100 - m_animationSpeed * 100;
         m_animationTimer->start(interval);
@@ -1816,19 +2163,9 @@ void GraphCanvas::resetAlgorithm() {
 
     deleteAlgorithm();
 
-    for (auto& [id, item] : m_nodeItems) {
-        if (item.shape) {
-            item.shape->setBrush(QBrush(Qt::lightGray));
-        }
-    }
-
-    for (auto& edgeItem : m_edgeItems) {
-        if (edgeItem->line) {
-            QPen pen(Qt::black, 3);
-            pen.setCapStyle(Qt::RoundCap);
-            edgeItem->line->setPen(pen);
-        }
-    }
+    // 平滑恢复到默认外观
+    updateNodeColors();
+    updateEdgeColors();
 
     emit algorithmStateChanged(IDLE);
 }
@@ -2042,16 +2379,20 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
         NodeItem item;
         item.id = id;
         item.originalPos = QPointF(x, y);
+        if (m_darkMode) {
+            item.targetColor = item.dispColor = QColor(63, 63, 70, 235);
+        }
 
-        QPen nodePen(Qt::black, 2);
+        QPen nodePen(m_darkMode ? QColor("#d4d4d8") : QColor("#111827"), 2);
         nodePen.setJoinStyle(Qt::RoundJoin);
-        item.shape = m_scene->addEllipse(-25, -25, 50, 50, nodePen, QBrush(Qt::lightGray));
+        item.shape = m_scene->addEllipse(-25, -25, 50, 50, nodePen, makeNodeBrush(item.dispColor));
         item.shape->setPos(x, y);
         item.shape->setZValue(10);
+        item.spawnT = 1.0f;  // 加载的图直接稳定显示，不做弹出
 
         item.label = new QGraphicsSimpleTextItem(QString::fromStdString(label));
         item.label->setPos(-item.label->boundingRect().width()/2, -35);
-        item.label->setBrush(Qt::black);
+        item.label->setBrush(m_darkMode ? QColor("#f4f4f5") : QColor("#111827"));
         item.label->setFont(QFont("Arial", 10, QFont::Bold));
         item.label->setZValue(20);
         item.label->setParentItem(item.shape);
@@ -2059,7 +2400,7 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
 
         item.coordinateLabel = new QGraphicsSimpleTextItem(QString("(%1, %2)").arg(x).arg(y));
         item.coordinateLabel->setPos(-item.coordinateLabel->boundingRect().width()/2, 30);
-        item.coordinateLabel->setBrush(Qt::darkGray);
+        item.coordinateLabel->setBrush(m_darkMode ? QColor("#a1a1aa") : QColor("#52525b"));
         item.coordinateLabel->setFont(QFont("Arial", 8));
         item.coordinateLabel->setVisible(m_showCoordinates);
         item.coordinateLabel->setZValue(20);
@@ -2094,7 +2435,7 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
         QPointF fromEdge = getNodeEdgePoint(from, QPointF(toX, toY));
         QPointF toEdge = getNodeEdgePoint(to, QPointF(fromX, fromY));
 
-        QPen edgePen(Qt::black, 3);
+        QPen edgePen(m_darkMode ? QColor("#a1a1aa") : QColor("#1f2937"), 3);
         edgePen.setCapStyle(Qt::RoundCap);
         item->line = m_scene->addLine(
             fromEdge.x(), fromEdge.y(),
@@ -2102,6 +2443,14 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
             edgePen
         );
         item->line->setZValue(5);
+
+        // 边外观动画初值
+        item->targetColor = item->dispColor = m_darkMode ? QColor(161, 161, 170, 190)
+                                                         : QColor(30, 35, 45, 150);
+        item->targetArrowColor = item->dispArrowColor = m_darkMode ? QColor("#d4d4d8")
+                                                                   : QColor("#1f2937");
+        item->targetWidth = item->dispWidth = 3.0f;
+        item->targetStyle = Qt::SolidLine;
 
         if (m_graphType == DIRECTED_GRAPH) {
             drawArrow(item.get(), fromEdge.x(), fromEdge.y(), toEdge.x(), toEdge.y());
@@ -2118,7 +2467,7 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
         transform.scale(1, -1);
         item->weight->setTransform(transform);
 
-        item->weight->setBrush(Qt::darkRed);
+        item->weight->setBrush(m_darkMode ? QColor("#fca5a5") : QColor("#991b1b"));
         item->weight->setFont(QFont("Arial", 9, QFont::Bold));
         item->weight->setVisible(m_showWeights);
         item->weight->setZValue(15);
@@ -2126,6 +2475,9 @@ void GraphCanvas::rebuildCanvasFromGraph(Graph<std::string, int, Directed>* grap
 
         m_edgeItems.push_back(std::move(item));
     }
+
+    // 加载图后恢复标准 Y 翻转视图，保证节点名/权重文字方向正确
+    resetViewTransform();
 }
 
 // 显式实例化模板（必须！）
@@ -2141,17 +2493,7 @@ void GraphCanvas::paintEvent(QPaintEvent* event) {
 
 void GraphCanvas::setSelectedNode(int nodeId) {
     if (nodeId == m_selectedNode) return;
-
-    if (m_selectedNode != -1 && m_nodeItems.count(m_selectedNode)) {
-        m_nodeItems[m_selectedNode].shape->setBrush(QBrush(Qt::lightGray));
-    }
-
     m_selectedNode = nodeId;
-
-    if (m_selectedNode != -1 && m_nodeItems.count(m_selectedNode)) {
-        m_nodeItems[m_selectedNode].shape->setBrush(QBrush(QColor(0, 255, 0, 200)));
-    }
-
     updateNodeColors();
 }
 

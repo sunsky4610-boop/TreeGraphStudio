@@ -1,14 +1,24 @@
 # TreeGraph Studio · 树与图算法可视化教学系统
 
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
-![Qt](https://img.shields.io/badge/Qt-5.15.2-green.svg)
+![Qt](https://img.shields.io/badge/Qt-5.15.2-7C3AED.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![GitHub stars](https://img.shields.io/github/stars/sunsky4610-boop/TreeGraphStudio?style=social)
 
 > 让抽象的图论"看得见、跟得上、能动手"——用 C++17 与 Qt5 实现的树 / 图算法可视化教学桌面软件。
 
-用鼠标画出无向图、有向图或树，再以**单步动画**观看 BFS、DFS、Dijkstra、Kruskal 如何逐步运行；软件同时内置教程文档、示例图与教学视频，形成"编辑 → 演示 → 学习 → 练习"的完整闭环。
+用鼠标画出无向图、有向图或树，再以**单步动画**观看 BFS、DFS、Dijkstra、Kruskal 如何逐步运行；软件内置教程文档与任务式练习图，形成“编辑 → 演示 → 学习 → 练习”的完整闭环。
+
+## 直接下载运行
+
+不想配置开发环境的用户，可在 GitHub Releases 下载 `TreeGraphStudio-Windows-x64.zip`：
+
+1. 完整解压 ZIP，不能只从压缩包内直接打开 EXE；
+2. 双击 `TreeGraphStudio.exe`；
+3. Windows 首次提示安全确认时，选择“更多信息 → 仍要运行”。
+
+发布包已包含 Qt 运行库，Windows 10/11 x64 无需安装 Qt。
 
 ## 目录
 
@@ -28,7 +38,7 @@
 
 - **图结构编辑**：无向图 / 有向图 / 树一键切换；添加节点、添加边、选择三种模式；节点可拖拽、双击重命名、右键删除；边权重 1–100 可调，有向图自动绘制箭头；可选坐标轴与坐标显示。
 - **算法可视化**：运行 / 暂停 / 继续 / 上一步 / 下一步 / 重置，完整步骤历史可回放；用颜色区分访问节点、松弛边、被选中与被拒绝的生成树边；1–10 级调速；实时输出遍历顺序、最短路径与总权重；对"图不连通""目标不可达""有向图不能求 MST"给出明确提示。
-- **内置学习系统**：Markdown / TXT 教程阅读器（标题导航、关键字搜索、字号缩放）；内置 `.graph` 示例可一键载入练习；基于 Qt Multimedia 的教学视频播放，并支持自行导入文档、视频与案例。
+- **内置学习系统**：BFS、DFS、Dijkstra、Kruskal 四套内置课程；三套任务式 `.graph` 练习可一键载入；支持搜索、字号缩放及自行导入文档、视频与案例。
 - **数据持久化**：自定义 `.graph`（JSON）格式保存完整图结构，加载时自动校验图类型。
 
 ## 支持的算法
@@ -85,8 +95,7 @@
 2. Qt Creator →「文件 → 打开文件或项目」→ 选择根目录 `CMakeLists.txt`；
 3. 在配置页勾选套件 **Desktop Qt 5.15.2 MSVC2019 64bit**，点 Configure；
 4. `Ctrl+B` 构建，可执行文件生成在 `build-.../bin/`；
-5. **把整个 `learning resources` 文件夹复制到该 `bin` 目录旁边**，教程、示例图、视频才会被识别；
-6. `Ctrl+R` 运行。
+5. `Ctrl+R` 运行。教程与示例图已经编译进程序，不需要额外复制资源目录。
 
 ### 四、方式 B：命令行（MSVC + Ninja）
 
@@ -100,13 +109,13 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug ^
 cmake --build build
 ```
 
-产物位于 `build/bin/`，同样需把 `learning resources` 复制到其旁边。MinGW 把 `CMAKE_PREFIX_PATH` 换成对应 `mingw*_64` 目录即可。
+产物位于 `build/bin/`。MinGW 把 `CMAKE_PREFIX_PATH` 换成对应 `mingw*_64` 目录即可。
 
 ### 五、运行与部署提示
 
 - 构建脚本会**自动复制 Qt 的 `mediaservice` 媒体插件**到可执行文件目录，无需手动处理；
 - 想把 exe 拷到没装 Qt 的电脑运行，用 `windeployqt TreeGraphStudio.exe` 收集依赖 DLL；
-- 视频自带支持 **WMV**；MP4 / MKV 需安装 [K-Lite Codec Pack Basic](https://codecguide.com)；
+- 视频学习页支持用户自行导入本地视频；格式兼容性取决于 Windows 解码器；
 - 请使用**纯英文路径**编译与运行，中文 / 空格路径可能导致多媒体插件加载异常；
 - MSVC 下的 UTF-8 编码与 `M_PI` 等问题已在 `CMakeLists.txt` 中通过 `/utf-8` 与 `_USE_MATH_DEFINES` 处理，直接构建即可。
 
@@ -142,8 +151,8 @@ TreeGraphStudio/
 │   ├── ui/                 # 界面层：MainWindow 主窗口、GraphCanvas 画布、HelpWindow
 │   ├── study/              # 学习系统：文档阅读 / 示例图实践 / 视频播放
 │   └── utils/              # 工具：JsonSerializer 序列化、PathUtils 路径
-├── learning resources/     # 内置教学资源：documents 文档、graphs 示例图、videos 视频
-├── scripts/                # （可选开发工具）代码行数统计脚本及其报告
+├── learning resources/     # 内置教学资源源文件：documents 文档、graphs 示例图
+├── resources/              # 主题样式、应用图标与 Windows 资源
 ├── LICENSE                 # MIT 许可证
 └── README.md
 ```
@@ -185,7 +194,7 @@ TreeGraphStudio/
 仓库的 `CMakeLists.txt` 已为 MSVC 开启 `/utf-8` 并定义 `_USE_MATH_DEFINES`，直接用自带脚本构建即可，无需额外设置。
 
 **Q3：视频提示格式不支持？**
-Windows 自带支持 WMV；MP4 / MKV 请安装 K-Lite Codec Pack Basic。
+视频模块依赖系统解码器。当前发布版不附带示例视频，可自行导入本地视频；若格式无法播放，请转换为系统支持的格式。
 
 **Q4：有向图为什么不能用最小生成树？**
 MST（Kruskal）只定义在无向图上，软件会拦截并提示；有向图请使用 BFS / DFS / 最短路径。

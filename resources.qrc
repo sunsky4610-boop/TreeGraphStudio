@@ -1,6 +1,16 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/">
-        <!-- 可添加图标资源 -->
+        <!-- 全局浅色主题样式表 -->
+        <file alias="themes/light.qss">resources/themes/light.qss</file>
+        <file alias="themes/dark.qss">resources/themes/dark.qss</file>
+        <file alias="icons/app-icon.png">resources/icons/app-icon.png</file>
+        <file alias="learning/documents/BFS.md">learning resources/documents/BFS.md</file>
+        <file alias="learning/documents/DFS.md">learning resources/documents/DFS.md</file>
+        <file alias="learning/documents/Dijkstra.md">learning resources/documents/Dijkstra.md</file>
+        <file alias="learning/documents/Kruskal.md">learning resources/documents/Kruskal.md</file>
+        <file alias="learning/graphs/traversal.graph">learning resources/graphs/BFS&amp;DFS_1.graph</file>
+        <file alias="learning/graphs/shortest-path.graph">learning resources/graphs/dijkstra_1.graph</file>
+        <file alias="learning/graphs/minimum-spanning-tree.graph">learning resources/graphs/mst(Kruskal)_1.graph</file>
     </qresource>
 </RCC>

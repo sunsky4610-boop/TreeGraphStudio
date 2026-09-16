@@ -10,6 +10,9 @@ class HelpWindow : public QDialog {
 public:
     explicit HelpWindow(QWidget* parent = nullptr);
     
+    // 显示完整的静态操作手册(帮助菜单)
+    void showManual();
+
     // 绑定主窗口信息面板，实现实时同步
     void setInfoPanel(QTextEdit* infoPanel);
 

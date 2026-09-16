@@ -41,6 +41,7 @@ private slots:
 private:
     void setupUI();
     void createMenuBar();
+    void applyTheme(bool dark);
     void updateAlgorithmButtons();
     void updateGraphTypeButtons();
 
@@ -63,7 +64,7 @@ private:
     
     // 学习系统窗口指针
     StudyWindow* m_studyWindow;
-    
+
     QButtonGroup* m_graphTypeGroup;
     QPushButton* m_showWeightsBtn;
     QPushButton* m_newGraphBtn;
