@@ -1,21 +1,21 @@
 # TreeGraph Studio 2.0
 
-## 本版亮点
+## Highlights
 
-- 全新的浅色 / 深色产品级界面与应用图标。
-- 支持拖动画布、双击居中，以及运行和继续运行时的平滑全图居中。
-- 节点悬停平滑放大，算法状态采用克制的紫灰色系。
-- 内置 BFS、DFS、Dijkstra、Kruskal 四套算法课程。
-- 内置图遍历、最短路径、最小生成树三套任务式练习。
-- 教程和练习图嵌入程序，发布后无需额外资源目录。
+- A redesigned, product-quality interface with light and dark themes and a custom application icon.
+- Smooth canvas panning, double-click centering, and animated fit-to-view behavior when starting or resuming an algorithm.
+- Subtle node hover animations and a restrained purple-gray palette for algorithm states.
+- Built-in lessons for BFS, DFS, Dijkstra, and Kruskal.
+- Three guided practice scenarios covering graph traversal, shortest paths, and minimum spanning trees.
+- Lessons and practice graphs are embedded in the application, so no separate resource folder is required.
 
-## 运行要求
+## System Requirements
 
-- Windows 10 / 11 x64。
-- 解压整个 ZIP 后运行 `TreeGraphStudio.exe`。
-- 发布包已包含 Qt 运行库，不需要安装 Qt。
+- Windows 10 or Windows 11 x64.
+- Extract the complete ZIP archive, then launch `TreeGraphStudio.exe`.
+- The required Qt runtime libraries are included in the release package.
 
-## 已知说明
+## Notes
 
-- 视频学习页保留本地视频导入能力，本版不附带示例视频。
-- 应用暂未进行商业代码签名，Windows 可能在首次运行时显示安全确认。
+- The video-learning page supports importing local video files, but this release does not include sample videos.
+- The application is not commercially code-signed, so Windows may display a security prompt on first launch.
